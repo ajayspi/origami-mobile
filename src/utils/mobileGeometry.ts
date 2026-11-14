@@ -1549,6 +1549,59 @@ export function synthesizeKitStepGeometry(
       }
     }
   }
+  else if (id === 'aerospace-02') {
+    // FALCON DART — Supersonic Aerodynamic Glider (15 deg Dihedral Camber, Canard Ballast & Winglets)
+    const nose: [number, number, number] = [0, 0.02 * f, -1.65 * f];
+    const keelFront: [number, number, number] = [0, -0.18 * f, -0.6 * f];
+    const keelRear: [number, number, number] = [0, -0.24 * f, 0.9 * f];
+    const spineFront: [number, number, number] = [0, 0.1 * f, -0.5 * f];
+    const spineRear: [number, number, number] = [0, 0.14 * f, 0.85 * f];
+
+    // Left & Right Wingtips with 15 deg dihedral camber
+    const leftWingTip: [number, number, number] = [-1.35 * f, 0.24 * f, 0.75 * f];
+    const rightWingTip: [number, number, number] = [1.35 * f, 0.24 * f, 0.75 * f];
+    const leftMidWing: [number, number, number] = [-0.75 * f, 0.12 * f, 0.45 * f];
+    const rightMidWing: [number, number, number] = [0.75 * f, 0.12 * f, 0.45 * f];
+
+    // Vertical winglets
+    const leftWingletTop: [number, number, number] = [-1.35 * f, 0.58 * f, 0.75 * f];
+    const rightWingletTop: [number, number, number] = [1.35 * f, 0.58 * f, 0.75 * f];
+
+    // Canards / Fore-wings
+    const leftCanard: [number, number, number] = [-0.55 * f, 0.05 * f, -0.3 * f];
+    const rightCanard: [number, number, number] = [0.55 * f, 0.05 * f, -0.3 * f];
+
+    // Upper Surfaces
+    addTri(vertices, nose, leftCanard, spineFront);
+    addTri(vertices, nose, spineFront, rightCanard);
+    addTri(vertices, spineFront, leftCanard, leftMidWing);
+    addTri(vertices, spineFront, leftMidWing, spineRear);
+    addTri(vertices, leftMidWing, leftWingTip, spineRear);
+
+    addTri(vertices, spineFront, rightMidWing, rightCanard);
+    addTri(vertices, spineFront, spineRear, rightMidWing);
+    addTri(vertices, rightMidWing, spineRear, rightWingTip);
+
+    // Vertical Winglets
+    addTri(vertices, leftWingTip, leftWingletTop, spineRear);
+    addTri(vertices, leftWingTip, spineRear, leftWingletTop);
+    addTri(vertices, rightWingTip, spineRear, rightWingletTop);
+    addTri(vertices, rightWingTip, rightWingletTop, spineRear);
+
+    // Lower Keel / Underbelly
+    addTri(vertices, nose, keelFront, leftCanard);
+    addTri(vertices, nose, rightCanard, keelFront);
+    addTri(vertices, keelFront, keelRear, leftMidWing);
+    addTri(vertices, keelFront, rightMidWing, keelRear);
+    addTri(vertices, keelFront, leftCanard, leftMidWing);
+    addTri(vertices, keelFront, rightMidWing, rightCanard);
+    addTri(vertices, leftMidWing, keelRear, leftWingTip);
+    addTri(vertices, rightMidWing, rightWingTip, keelRear);
+
+    // Rear trailing edge closures
+    addTri(vertices, spineRear, leftWingTip, keelRear);
+    addTri(vertices, spineRear, keelRear, rightWingTip);
+  }
   else {
     // Polyhedral diamond
     const wRadius = 1.05 * f;
