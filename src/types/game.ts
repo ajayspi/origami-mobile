@@ -1,6 +1,8 @@
 export type FlightState = 'idle' | 'aiming' | 'flying' | 'landed' | 'hangar';
 export type TimeOfDay = 'morning' | 'sunset' | 'night';
 export type PaperStock = 'washi' | 'gold_foil' | 'sakura' | 'indigo';
+export type BiomeType = 'canyon' | 'sakura_valley' | 'alpine_glacier' | 'bamboo_forest';
+export type StuntType = 'roll' | 'loop' | null;
 
 export interface AircraftUpgrades {
   lift: number;          // Level 1-5 (each +10% lift coefficient)
@@ -16,9 +18,10 @@ export interface GameLevel {
   theme: string;
   goalDistance: number;  // meters (500, 1000, 1500, 2000, 2500)
   timeOfDay: TimeOfDay;
+  biome?: BiomeType;
   windSpeed: number;     // m/s tailwind/crosswind
   obstacleDensity: 'low' | 'medium' | 'high';
-  allowedObstacles: ('windmill' | 'lantern' | 'geyser' | 'thermal' | 'arch')[];
+  allowedObstacles: ('windmill' | 'lantern' | 'geyser' | 'thermal' | 'arch' | 'torii' | 'icicle' | 'bamboo')[];
   unlockedByDefault: boolean;
 }
 
@@ -36,6 +39,7 @@ export interface GameState {
   unlockedLevels: string[];
   upgrades: AircraftUpgrades;
   activePaperStock: PaperStock;
+  activeStunt: StuntType;
 
   // Actions
   setFlightState: (state: FlightState) => void;
@@ -44,6 +48,7 @@ export interface GameState {
   updateTelemetry: (distance: number, altitude: number, speed: number) => void;
   collectStar: () => void;
   triggerThermal: () => void;
+  triggerStunt: (type: 'roll' | 'loop') => void;
   touchdown: () => void;
   spendStarsOnUpgrade: (upgradeKey: keyof AircraftUpgrades, cost: number) => boolean;
   setPaperStock: (stock: PaperStock) => void;

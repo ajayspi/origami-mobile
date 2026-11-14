@@ -124,6 +124,20 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({ isOpen, onCl
                     >
                       LEVEL {lvl.levelNumber}
                     </span>
+                    {lvl.biome && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: lvl.biome === 'sakura_valley' ? '#be185d' : lvl.biome === 'alpine_glacier' ? '#0369a1' : lvl.biome === 'bamboo_forest' ? '#15803d' : '#b45309',
+                          backgroundColor: lvl.biome === 'sakura_valley' ? '#fce7f3' : lvl.biome === 'alpine_glacier' ? '#e0f2fe' : lvl.biome === 'bamboo_forest' ? '#dcfce7' : '#fef3c7',
+                          padding: '2px 6px',
+                          borderRadius: 8
+                        }}
+                      >
+                        {lvl.biome === 'sakura_valley' ? '🌸 Sakura' : lvl.biome === 'alpine_glacier' ? '❄️ Glacier' : lvl.biome === 'bamboo_forest' ? '🎋 Bamboo' : '🏜️ Canyon'}
+                      </span>
+                    )}
                     {cleared && <CheckCircle size={14} color="#10b981" />}
                   </div>
 

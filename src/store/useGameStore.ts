@@ -57,6 +57,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   unlockedLevels: getStoredUnlockedLevels(),
   upgrades: getStoredUpgrades(),
   activePaperStock: 'washi',
+  activeStunt: null,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
 
@@ -88,6 +89,16 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   triggerThermal: () => {
     set(state => ({ thermalsCaught: state.thermalsCaught + 1 }));
+  },
+
+  triggerStunt: (type: 'roll' | 'loop') => {
+    set({ activeStunt: type });
+    // Reset after stunt window
+    setTimeout(() => {
+      if (get().activeStunt === type) {
+        set({ activeStunt: null });
+      }
+    }, type === 'roll' ? 700 : 1100);
   },
 
   touchdown: () => {

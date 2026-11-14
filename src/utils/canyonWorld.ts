@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GameLevel, TimeOfDay } from '../types/game';
+import { GameLevel, TimeOfDay, BiomeType } from '../types/game';
 import { ObstacleBounds } from './flightPhysics';
 
 export interface WeatherLightingConfig {
@@ -32,10 +32,46 @@ export interface CanyonTrackData {
   segments: CanyonSegment[];
   obstacles: ObstacleEntity[];
   level: GameLevel;
+  ambientParticles?: THREE.Group;
 }
 
-export function getWeatherLighting(distance: number): WeatherLightingConfig {
+export function getWeatherLighting(distance: number, biome?: BiomeType): WeatherLightingConfig {
+  const currentBiome = biome || 'canyon';
+
   if (distance < 1000) {
+    if (currentBiome === 'sakura_valley') {
+      return {
+        timeOfDay: 'morning',
+        skyColor: '#fbcfe8',
+        fogColor: '#fdf2f8',
+        sunColor: '#fff1f2',
+        sunIntensity: 1.25,
+        fogNear: 25,
+        fogFar: 130
+      };
+    } else if (currentBiome === 'alpine_glacier') {
+      return {
+        timeOfDay: 'morning',
+        skyColor: '#bae6fd',
+        fogColor: '#e0f2fe',
+        sunColor: '#f0fdfa',
+        sunIntensity: 1.35,
+        fogNear: 20,
+        fogFar: 140
+      };
+    } else if (currentBiome === 'bamboo_forest') {
+      return {
+        timeOfDay: 'morning',
+        skyColor: '#d1fae5',
+        fogColor: '#ecfdf5',
+        sunColor: '#fef9c3',
+        sunIntensity: 1.2,
+        fogNear: 20,
+        fogFar: 120
+      };
+    }
+
+    // Default Canyon Morning
     return {
       timeOfDay: 'morning',
       skyColor: '#a5c9eb',
@@ -46,6 +82,39 @@ export function getWeatherLighting(distance: number): WeatherLightingConfig {
       fogFar: 120
     };
   } else if (distance < 2000) {
+    if (currentBiome === 'sakura_valley') {
+      return {
+        timeOfDay: 'sunset',
+        skyColor: '#f472b6',
+        fogColor: '#fbcfe8',
+        sunColor: '#fb7185',
+        sunIntensity: 1.4,
+        fogNear: 15,
+        fogFar: 110
+      };
+    } else if (currentBiome === 'alpine_glacier') {
+      return {
+        timeOfDay: 'sunset',
+        skyColor: '#93c5fa',
+        fogColor: '#c7d2fe',
+        sunColor: '#818cf8',
+        sunIntensity: 1.3,
+        fogNear: 15,
+        fogFar: 105
+      };
+    } else if (currentBiome === 'bamboo_forest') {
+      return {
+        timeOfDay: 'sunset',
+        skyColor: '#a7f3d0',
+        fogColor: '#fed7aa',
+        sunColor: '#f59e0b',
+        sunIntensity: 1.35,
+        fogNear: 15,
+        fogFar: 100
+      };
+    }
+
+    // Default Canyon Sunset
     return {
       timeOfDay: 'sunset',
       skyColor: '#e28a52',
@@ -56,6 +125,39 @@ export function getWeatherLighting(distance: number): WeatherLightingConfig {
       fogFar: 100
     };
   } else {
+    if (currentBiome === 'sakura_valley') {
+      return {
+        timeOfDay: 'night',
+        skyColor: '#1e112a',
+        fogColor: '#2e1065',
+        sunColor: '#f43f5e',
+        sunIntensity: 0.65,
+        fogNear: 10,
+        fogFar: 85
+      };
+    } else if (currentBiome === 'alpine_glacier') {
+      return {
+        timeOfDay: 'night',
+        skyColor: '#0b132b',
+        fogColor: '#1c2541',
+        sunColor: '#60a5fa',
+        sunIntensity: 0.6,
+        fogNear: 10,
+        fogFar: 90
+      };
+    } else if (currentBiome === 'bamboo_forest') {
+      return {
+        timeOfDay: 'night',
+        skyColor: '#062e22',
+        fogColor: '#0f3d2e',
+        sunColor: '#34d399',
+        sunIntensity: 0.55,
+        fogNear: 10,
+        fogFar: 80
+      };
+    }
+
+    // Default Canyon Night
     return {
       timeOfDay: 'night',
       skyColor: '#0f1423',
@@ -73,28 +175,48 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   const segments: CanyonSegment[] = [];
   const obstacles: ObstacleEntity[] = [];
 
+  const biome: BiomeType = level.biome || 'canyon';
   const segmentLength = 100;
   const numSegments = Math.max(10, Math.ceil(level.goalDistance / segmentLength) + 2);
   const canyonWidth = 28;
   const wallHeight = 22;
 
-  // Shared materials
+  // Biome Palettes
+  let groundColor = 0xe2ded4;
+  let wallColor = 0xc8bfa8;
+  let propMatColor = 0xb91c1c;
+
+  if (biome === 'sakura_valley') {
+    groundColor = 0xdcfce7;
+    wallColor = 0xf1f5f9;
+    propMatColor = 0xdc2626; // Vermilion Red
+  } else if (biome === 'alpine_glacier') {
+    groundColor = 0xf0fdfa;
+    wallColor = 0x93c5fd;
+    propMatColor = 0x38bdf8; // Crystal Azure
+  } else if (biome === 'bamboo_forest') {
+    groundColor = 0x86efac;
+    wallColor = 0x15803d;
+    propMatColor = 0x22c55e; // Emerald Green
+  }
+
+  // Shared Materials
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0xe2ded4,
+    color: groundColor,
     roughness: 0.9,
     metalness: 0.05,
     flatShading: true
   });
 
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xc8bfa8,
+    color: wallColor,
     roughness: 0.95,
-    metalness: 0.0,
+    metalness: biome === 'alpine_glacier' ? 0.25 : 0.0,
     flatShading: true
   });
 
-  const windmillMat = new THREE.MeshStandardMaterial({
-    color: 0xb91c1c,
+  const propMat = new THREE.MeshStandardMaterial({
+    color: propMatColor,
     roughness: 0.7,
     flatShading: true
   });
@@ -106,9 +228,9 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   });
 
   const thermalMat = new THREE.MeshBasicMaterial({
-    color: 0xfcd34d,
+    color: biome === 'alpine_glacier' ? 0x67e8f9 : 0xfcd34d,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.3,
     side: THREE.DoubleSide
   });
 
@@ -156,10 +278,9 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       mesh: floorMesh
     });
 
-    // Add Obstacles based on allowedObstacles
     const zDist = Math.abs(zMid);
 
-    // Thermal updrafts every ~180m
+    // 1. Thermal updrafts every ~180m
     if (level.allowedObstacles.includes('thermal') && i % 2 === 1) {
       const thermalGroup = new THREE.Group();
       const cylGeo = new THREE.CylinderGeometry(4.5, 4.0, 25, 16, 1, true);
@@ -179,7 +300,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       });
     }
 
-    // Floating Stars along flight path
+    // 2. Floating Stars along flight path
     const starCount = 3;
     for (let s = 0; s < starCount; s++) {
       const starGroup = new THREE.Group();
@@ -203,22 +324,20 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       });
     }
 
-    // Windmills (Every ~250m)
+    // 3. Windmills (Every ~250m)
     if (level.allowedObstacles.includes('windmill') && zDist >= 200 && i % 3 === 0) {
       const windmillGroup = new THREE.Group();
-      // Mast
       const mastGeo = new THREE.CylinderGeometry(0.8, 1.2, 14, 8);
       const mast = new THREE.Mesh(mastGeo, wallMat);
       mast.position.set(0, 7, 0);
       windmillGroup.add(mast);
 
-      // Blades Group
       const bladesGroup = new THREE.Group();
       bladesGroup.position.set(0, 13, 0);
 
       const bladeGeo = new THREE.BoxGeometry(1.2, 10, 0.15);
-      const b1 = new THREE.Mesh(bladeGeo, windmillMat);
-      const b2 = new THREE.Mesh(bladeGeo, windmillMat);
+      const b1 = new THREE.Mesh(bladeGeo, propMat);
+      const b2 = new THREE.Mesh(bladeGeo, propMat);
       b2.rotation.z = Math.PI / 2;
       bladesGroup.add(b1, b2);
 
@@ -238,7 +357,89 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       });
     }
 
-    // Steam Geysers
+    // 4. Torii Gate Arches (Sakura Valley Biome)
+    if (level.allowedObstacles.includes('torii') && zDist >= 150 && i % 3 === 1) {
+      const toriiGroup = new THREE.Group();
+      const pillarGeo = new THREE.CylinderGeometry(0.55, 0.65, 13, 12);
+      const leftPillar = new THREE.Mesh(pillarGeo, propMat);
+      leftPillar.position.set(-6.5, 6.5, 0);
+      const rightPillar = new THREE.Mesh(pillarGeo, propMat);
+      rightPillar.position.set(6.5, 6.5, 0);
+
+      // Top crossbeam
+      const beamGeo = new THREE.BoxGeometry(16, 0.9, 1.2);
+      const beam = new THREE.Mesh(beamGeo, propMat);
+      beam.position.set(0, 12.5, 0);
+
+      toriiGroup.add(leftPillar, rightPillar, beam);
+      toriiGroup.position.set(0, 0, zMid);
+
+      trackGroup.add(toriiGroup);
+      obstacles.push({
+        id: `torii-${i}`,
+        type: 'solid',
+        center: new THREE.Vector3(0, 12.5, zMid),
+        radius: 2.5,
+        normal: new THREE.Vector3(0, 0, 1),
+        meshGroup: toriiGroup
+      });
+    }
+
+    // 5. Icicle Spire Columns (Alpine Glacier Biome)
+    if (level.allowedObstacles.includes('icicle') && zDist >= 200 && i % 4 === 2) {
+      const icicleGroup = new THREE.Group();
+      const icicleMat = new THREE.MeshStandardMaterial({ color: 0xbae6fd, roughness: 0.15, metalness: 0.35, flatShading: true });
+      // Stalactite hanging down
+      const topGeo = new THREE.ConeGeometry(1.6, 9, 8);
+      topGeo.rotateX(Math.PI);
+      const topSpire = new THREE.Mesh(topGeo, icicleMat);
+      topSpire.position.set(i % 2 === 0 ? 4 : -4, 17, 0);
+
+      // Stalagmite rising up
+      const botGeo = new THREE.ConeGeometry(1.8, 8, 8);
+      const botSpire = new THREE.Mesh(botGeo, icicleMat);
+      botSpire.position.set(i % 2 === 0 ? -4 : 4, 4, 0);
+
+      icicleGroup.add(topSpire, botSpire);
+      icicleGroup.position.set(0, 0, zMid);
+
+      trackGroup.add(icicleGroup);
+      obstacles.push({
+        id: `icicle-${i}`,
+        type: 'solid',
+        center: new THREE.Vector3(i % 2 === 0 ? -4 : 4, 4, zMid),
+        radius: 2.2,
+        normal: new THREE.Vector3(0, 0, 1),
+        meshGroup: icicleGroup
+      });
+    }
+
+    // 6. Bamboo Slalom Stalks (Bamboo Forest Biome)
+    if (level.allowedObstacles.includes('bamboo') && zDist >= 150 && i % 3 === 2) {
+      const bambooGroup = new THREE.Group();
+      const bambooGeo = new THREE.CylinderGeometry(0.4, 0.5, 18, 8);
+      const b1 = new THREE.Mesh(bambooGeo, propMat);
+      b1.position.set(-4.5, 9, -5);
+      const b2 = new THREE.Mesh(bambooGeo, propMat);
+      b2.position.set(4.5, 9, 5);
+      const b3 = new THREE.Mesh(bambooGeo, propMat);
+      b3.position.set(0, 9, 0);
+
+      bambooGroup.add(b1, b2, b3);
+      bambooGroup.position.set(0, 0, zMid);
+
+      trackGroup.add(bambooGroup);
+      obstacles.push({
+        id: `bamboo-${i}`,
+        type: 'solid',
+        center: new THREE.Vector3(0, 9, zMid),
+        radius: 2.0,
+        normal: new THREE.Vector3(0, 0, 1),
+        meshGroup: bambooGroup
+      });
+    }
+
+    // 7. Steam Geysers
     if (level.allowedObstacles.includes('geyser') && zDist >= 300 && i % 4 === 1) {
       const geyserGroup = new THREE.Group();
       const steamGeo = new THREE.ConeGeometry(3.5, 18, 16);
@@ -258,7 +459,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       });
     }
 
-    // Arches with swinging lanterns
+    // 8. Lantern Arches
     if (level.allowedObstacles.includes('lantern') && zDist >= 400 && i % 5 === 2) {
       const archGroup = new THREE.Group();
       const archGeo = new THREE.TorusGeometry(8, 0.9, 8, 16, Math.PI);
@@ -266,11 +467,10 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       archMesh.position.set(0, 0, 0);
       archGroup.add(archMesh);
 
-      // Hanging lantern
       const lanternGroup = new THREE.Group();
       lanternGroup.position.set(0, 7.5, 0);
       const lanternGeo = new THREE.SphereGeometry(1.1, 8, 8);
-      const lanternMesh = new THREE.Mesh(lanternGeo, windmillMat);
+      const lanternMesh = new THREE.Mesh(lanternGeo, propMat);
       lanternMesh.position.set(0, -3.5, 0);
       lanternGroup.add(lanternMesh);
 
@@ -290,11 +490,38 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     }
   }
 
+  // Ambient Drifting Particles (Sakura petals or snow flurry)
+  let ambientParticles: THREE.Group | undefined;
+  if (biome === 'sakura_valley' || biome === 'alpine_glacier' || biome === 'bamboo_forest') {
+    ambientParticles = new THREE.Group();
+    const particleCount = 45;
+    const particleMat = new THREE.MeshBasicMaterial({
+      color: biome === 'sakura_valley' ? 0xf472b6 : (biome === 'alpine_glacier' ? 0xe0f2fe : 0xa7f3d0),
+      transparent: true,
+      opacity: 0.75,
+      side: THREE.DoubleSide
+    });
+    const particleGeo = new THREE.PlaneGeometry(0.35, 0.35);
+
+    for (let p = 0; p < particleCount; p++) {
+      const pMesh = new THREE.Mesh(particleGeo, particleMat);
+      pMesh.position.set(
+        (Math.random() - 0.5) * canyonWidth,
+        Math.random() * wallHeight,
+        -Math.random() * Math.min(600, level.goalDistance)
+      );
+      pMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+      ambientParticles.add(pMesh);
+    }
+    trackGroup.add(ambientParticles);
+  }
+
   return {
     trackGroup,
     segments,
     obstacles,
-    level
+    level,
+    ambientParticles
   };
 }
 
@@ -312,6 +539,20 @@ export function updateDynamicObstacles(track: CanyonTrackData, time: number): vo
     } else if (obs.type === 'geyser') {
       const pulse = 0.8 + Math.sin(time * 4) * 0.25;
       obs.meshGroup.scale.set(pulse, 1.0 + Math.sin(time * 5) * 0.3, pulse);
+    }
+  }
+
+  // Animate ambient drifting particles (Sakura petals or snow flurry)
+  if (track.ambientParticles) {
+    const children = track.ambientParticles.children;
+    for (let p = 0; p < children.length; p++) {
+      const pt = children[p];
+      pt.position.y -= 0.04;
+      pt.position.x += Math.sin(time * 1.5 + p) * 0.02;
+      pt.rotation.z += 0.03;
+      if (pt.position.y < 0.2) {
+        pt.position.y = 20;
+      }
     }
   }
 }

@@ -31,4 +31,11 @@ describe('gameAudio', () => {
     expect(() => gameAudio.playThermalHum()).not.toThrow();
     expect(() => gameAudio.playDeflectionThud()).not.toThrow();
   });
+
+  it('synthesizes aerobatic stunt audio (barrel roll, loop whoosh, flutter rustle)', () => {
+    gameAudio.init();
+    expect(() => gameAudio.playBarrelRoll()).not.toThrow();
+    expect(() => gameAudio.playLoopWhoosh()).not.toThrow();
+    expect(() => gameAudio.playFlutterRustle()).not.toThrow();
+  });
 });

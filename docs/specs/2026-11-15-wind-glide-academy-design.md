@@ -128,3 +128,50 @@ Decouples the 60 FPS Three.js physics animation loop from React's DOM rendering 
 2. **Audio Polyphony**: Verify Web Audio context recovers cleanly on mobile lock/unlock and audio resumes without click artifacts.
 3. **Weather Gradient Transitions**: Verify smooth Three.js background color and fog color interpolation across distance milestones ($0\text{m} \rightarrow 1000\text{m} \rightarrow 2000\text{m}$).
 4. **Build & Bundle**: Ensure `tsc -b` and `vite build` complete with 0 errors and bundle size remains under control.
+
+---
+
+## 7. Interactive Aerobatic Stunts & Biomes (v1.1)
+
+### 7.1 Aerobatic In-Flight Stunts
+- **Double-Tap — 360° Barrel Roll**:
+  - Glider executes a rapid $2\pi$ roll rotation over $0.65\,\text{s}$ with an aerodynamic swoosh audio sweep ($420\text{Hz} \rightarrow 1180\text{Hz} \rightarrow 320\text{Hz}$).
+  - Grants temporary invulnerability shield against solid obstacle collisions, allowing graceful glancing passes through windmill blades and tight arches.
+- **Swipe-Up Flick — Loop-the-Loop**:
+  - Glider arcs through a full vertical pitch loop over $0.95\,\text{s}$, climbing $+6.5\,\text{m}$ in altitude while converting forward kinetic speed into potential altitude.
+  - Accompanied by an ascending pitch loop whoosh ($240\text{Hz} \rightarrow 680\text{Hz}$).
+- **High-Speed Dive Paper Flutter**:
+  - When diving steeply ($\alpha < -0.22\,\text{rad}$, airspeed $> 14\,\text{m/s}$), wingtip micro-vibrations oscillate at $18\,\text{Hz}$ with tactile rustling audio.
+
+### 7.2 Distinct Procedural Biomes
+- **Sakura Pagoda Valley (`sakura_valley`)**: Blush pink cherry dawn sky, vermilion Torii gate arches, tiered pagodas, and 45 drifting pink sakura petal flakes.
+- **Alpine Glacial Crest (`alpine_glacier`)**: Arctic cyan ice canyon, crystalline stalactite/stalagmite icicle spires, azure glacier walls, and swirling frost flakes.
+- **Bamboo Whisper Forest (`bamboo_forest`)**: Verdant mossy floor, towering green bamboo stalk clusters forming slalom gates, and swaying wind chimes.
+- **Desert Canyon (`canyon`)**: Classic warm sandstone canyon with rotating 4-blade windmills, lantern arches, and thermal vents.
+
+---
+
+## 8. 💡 Saved Backlog Ideas: Pre-Flight Environment & Skybox Customizer Modal
+
+> **Idea Status**: Saved in Backlog for future player customization expansion.
+
+### 8.1 Concept Overview
+A dedicated pre-flight Atmosphere & Environment Customizer Modal accessible directly from the launchpad runway. It allows players to decouple the visual skybox, time of day, and environmental atmospheric conditions from the fixed level campaign.
+
+### 8.2 Proposed Skybox & Lighting Themes
+1. **Nordic Aurora Borealis**:
+   - Deep obsidian sky (`#050814`) with shimmering emerald-green and violet atmospheric light curtains (`#10b981`, `#8b5cf6`).
+   - Luminous neon paper fireflies and crystalline starlight.
+2. **Golden Twilight & Lantern Glow**:
+   - Radiant sunset glow (`#f97316`) casting long dramatic geometric shadows.
+   - Warm amber lanterns glowing along canyon rims.
+3. **Thunderhead Storm & Cloud Surf**:
+   - Dark storm clouds (`#1e293b`) with sheet lightning flashes illuminating distant origami mountain silhouettes.
+   - Tailwind gusts and turbulence pockets rewarding bold navigation.
+4. **Nebula Starlight Haven**:
+   - Cosmic purple and deep indigo starry sky with drifting constellation stars and celestial thermals.
+
+### 8.3 Wind & Challenge Modifiers
+- **Thermal Surge (+30% Thermals)**: Ideal for younger children wanting effortless soaring.
+- **Crosswind Alley (4.5 m/s lateral shear)**: Tests precision roll and yaw counter-steering.
+- **Night Flight Lantern Challenge**: Dark canyon with glowing lanterns as navigation beacons.

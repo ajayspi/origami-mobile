@@ -24,20 +24,29 @@ OrigamiStudio Mobile is a dedicated, distraction-free mobile application enginee
 
 2. **Wind Glide Academy (3D Paper Flight Game)**:
    * **Touch Slingshot Launching**: Pull back on screen with touch/drag to set launch speed ($8\text{--}24\,\text{m/s}$) and pitch angle ($\pm 25^\circ$), with visual trajectory bead arc.
+   * **Interactive Aerobatic Stunts**:
+     - *Double-Tap — 360° Barrel Roll*: Rapid full-body roll with aerodynamic swoosh and obstacle invulnerability shield.
+     - *Swipe-Up — Loop-the-Loop*: Pitch flare trading forward kinetic speed for sudden $+6.5\text{m}$ altitude climb.
+     - *High-Speed Dive Flutter*: Paper wingtip micro-vibrations and tactile rustling audio when diving at steep angles.
+   * **4 Distinct Procedural Biomes**:
+     - *Sakura Pagoda Valley*: Blush pink dawn, vermilion Torii gate arches, tiered pagodas, and drifting pink sakura petal flakes.
+     - *Alpine Glacial Crest*: Frozen cyan floor, crystalline icicle spires, azure glacier walls, and swirling frost flurries.
+     - *Bamboo Whisper Forest*: Emerald moss ground, dense bamboo stalk slalom gates, and swaying paper wind chimes.
+     - *Desert Canyon*: Sunlit sandstone cliffs, rotating 4-blade paper windmills, and swinging lantern arches.
    * **Authentic Aerodynamic Simulation**: Lift curve polar ($C_L = 2\pi\alpha$), stall recovery torque ($\alpha > 18^\circ$), wing ground effect cushion ($+25\%$ lift near ground), and non-punitive glancing wall reflections preserving forward momentum.
    * **5-Level Campaign & Endless Mode**:
-     - *Level 1: Gentle Valley* (500m, Morning sky, wide canyon)
-     - *Level 2: Whispering Pines* (800m, Sunset sky, swaying lanterns)
-     - *Level 3: Steamy Gorge* (1,200m, Geysers with upward thermal updrafts)
-     - *Level 4: Storm Peak* (1,500m, Gusting crosswinds & storm clouds)
-     - *Level 5: Master Canyon* (2,000m, Night sky with paper fireflies & spinning windmills)
-     - *Endless Thermal Drift*: Procedural continuous canyon with dynamic weather transitions (Morning $\rightarrow$ Sunset $\rightarrow$ Night).
+     - *Level 1: Morning Breeze Valley* (500m, Morning sky, Canyon biome)
+     - *Level 2: Bamboo Whisper Forest* (1,000m, Morning mist, Bamboo grove with slalom stalks)
+     - *Level 3: Sakura Blossom Falls* (1,500m, Sunset sky, Sakura valley with Torii gates & geysers)
+     - *Level 4: Alpine Glacial Crest* (2,000m, Sunset sky, Alpine glacier with icicle spires)
+     - *Level 5: Moonlit Pagoda Shrine* (2,500m, Night sky with paper fireflies & Torii gates)
+     - *Endless Thermal Drift*: Procedural continuous canyon dynamically transitioning across all four biomes and weathers.
    * **Tactile Procedural ASMR Sound**: 100% synthesized using Web Audio API (zero external audio files):
      - Slingshot rubber band release snap.
      - Dynamic rushing wind noise loop modulated by airspeed.
      - Pentatonic star collection chimes ($F_5, G_5, A_5, C_6, D_6$).
-     - Thermal vortex upward whoosh.
-     - Gentle obstacle deflection thud.
+     - Barrel roll harmonic swoop & loop-the-loop ascending whoosh.
+     - Thermal vortex upward hum and gentle obstacle deflection thuds.
    * **Artisan Hangar**: Switch between completed origami models (e.g., *Falcon Dart* `aerospace-02`) with aerodynamic tuning specs (Glide Ratio, Dihedral Angle, Camber).
 
 ---

@@ -22,6 +22,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const thermalsCaught = useGameStore(s => s.thermalsCaught);
   const starsCollected = useGameStore(s => s.starsCollected);
   const totalStars = useGameStore(s => s.totalStars);
+  const activeStunt = useGameStore(s => s.activeStunt);
 
   const activeLevel = GAME_LEVELS.find(l => l.id === activeLevelId) || GAME_LEVELS[0];
   const progressPercent = Math.min(100, Math.round((distance / activeLevel.goalDistance) * 100));
@@ -159,6 +160,51 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 700, textTransform: 'uppercase' }}>Speed</div>
             <div style={{ fontSize: 22, fontWeight: 900 }}>{Math.round(speed * 3.6)} <span style={{ fontSize: 12 }}>km/h</span></div>
           </div>
+        </div>
+      )}
+
+      {/* Aerobatic Stunt Banner */}
+      {flightState === 'flying' && activeStunt && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top) + 120px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: activeStunt === 'roll' ? 'rgba(14, 165, 233, 0.95)' : 'rgba(236, 72, 153, 0.95)',
+            color: '#ffffff',
+            padding: '6px 18px',
+            borderRadius: 20,
+            fontSize: 13,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
+            animation: 'pulse 0.5s infinite alternate'
+          }}
+        >
+          <Sparkles size={16} />
+          {activeStunt === 'roll' ? '🌪️ 360° BARREL ROLL! (SHIELD ON)' : '🚀 LOOP-THE-LOOP! (+ALTITUDE)'}
+        </div>
+      )}
+
+      {/* In-Flight Gesture Hint */}
+      {flightState === 'flying' && !activeStunt && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(env(safe-area-inset-bottom) + 16px)',
+            left: 20,
+            right: 20,
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 11,
+            fontWeight: 700,
+            textShadow: '0 2px 6px rgba(0,0,0,0.5)'
+          }}
+        >
+          ⚡ Double-tap: Barrel Roll | Swipe up: Loop-the-Loop
         </div>
       )}
 

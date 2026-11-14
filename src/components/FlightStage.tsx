@@ -138,6 +138,45 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     let touchStart = { x: 0, y: 0, active: false };
     let pullBack = { dx: 0, dy: 0, distance: 0 };
 
+    // Aerobatic Stunt State
+    let activeStunt: {
+      type: 'roll' | 'loop';
+      elapsed: number;
+      duration: number;
+      initialRoll: number;
+      initialPitch: number;
+    } | null = null;
+
+    let lastTapTime = 0;
+    let touchStartTime = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const triggerStunt = (type: 'roll' | 'loop') => {
+      if (activeStunt !== null) return;
+      if (type === 'roll') {
+        activeStunt = {
+          type: 'roll',
+          elapsed: 0,
+          duration: 0.65,
+          initialRoll: physicsState.roll,
+          initialPitch: physicsState.pitch
+        };
+        gameAudio.playBarrelRoll();
+        useGameStore.getState().triggerStunt('roll');
+      } else if (type === 'loop') {
+        activeStunt = {
+          type: 'loop',
+          elapsed: 0,
+          duration: 0.95,
+          initialRoll: physicsState.roll,
+          initialPitch: physicsState.pitch
+        };
+        gameAudio.playLoopWhoosh();
+        useGameStore.getState().triggerStunt('loop');
+      }
+    };
+
     const updateCordPoints = (planePos: THREE.Vector3) => {
       if (!slingshotCordRef.current) return;
       const positions = slingshotCordRef.current.geometry.attributes.position as THREE.BufferAttribute;
@@ -148,10 +187,23 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     // Touch Event Handlers for Mobile Slingshot & Steering
     const onTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
+      const now = performance.now();
+      const state = useGameStore.getState().flightState;
+
+      // Double-Tap Detection during flight -> 360° Barrel Roll
+      if (state === 'flying') {
+        if (now - lastTapTime < 280 && !activeStunt) {
+          triggerStunt('roll');
+        }
+      }
+
+      lastTapTime = now;
+      touchStartTime = now;
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
       touchStart = { x: touch.clientX, y: touch.clientY, active: true };
       gameAudio.init();
 
-      const state = useGameStore.getState().flightState;
       if (state === 'idle') {
         useGameStore.getState().setFlightState('aiming');
       }
@@ -182,7 +234,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       }
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (!touchStart.active) return;
       touchStart.active = false;
 
@@ -215,6 +267,17 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           slingshotCordRef.current.visible = false;
         }
       } else if (state === 'flying') {
+        // Swipe Up Detection during flight -> Loop-the-Loop!
+        const touch = e.changedTouches ? e.changedTouches[0] : null;
+        if (touch) {
+          const dtTouch = performance.now() - touchStartTime;
+          const dyTouch = touch.clientY - touchStartY;
+          const dxTouch = touch.clientX - touchStartX;
+          if (dtTouch < 280 && dyTouch < -40 && Math.abs(dxTouch) < 60 && !activeStunt) {
+            triggerStunt('loop');
+          }
+        }
+
         controls.pitchInput = 0;
         controls.rollInput = 0;
       }
@@ -242,13 +305,33 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Step Aerodynamics
         physicsState = computeAerodynamicStep(physicsState, controls, dt, liftMult, dragMult);
 
+        // Execute Active Aerobatic Stunt
+        if (activeStunt) {
+          activeStunt.elapsed += dt;
+          const p = Math.min(1.0, activeStunt.elapsed / activeStunt.duration);
+
+          if (activeStunt.type === 'roll') {
+            physicsState.roll = activeStunt.initialRoll + p * Math.PI * 2;
+          } else if (activeStunt.type === 'loop') {
+            physicsState.pitch = activeStunt.initialPitch + Math.sin(p * Math.PI * 2) * Math.PI * 1.5;
+            physicsState.altitude += Math.sin(p * Math.PI) * 6.5 * dt;
+            physicsState.position.y = physicsState.altitude;
+          }
+
+          if (p >= 1.0) {
+            activeStunt = null;
+          }
+        }
+
         // Check Obstacle Collisions
         const collision = checkGlancingDeflection(physicsState.position, physicsState.velocity, trackData.obstacles);
 
         if (collision.hasCollided) {
           if (collision.obstacleType === 'solid') {
             physicsState.velocity.copy(collision.deflectedVelocity);
-            gameAudio.playDeflectionThud();
+            if (!activeStunt || activeStunt.type !== 'roll') {
+              gameAudio.playDeflectionThud();
+            }
           } else if (collision.obstacleType === 'thermal') {
             physicsState.velocity.y = Math.min(8.5, physicsState.velocity.y + 4.5);
             useGameStore.getState().triggerThermal();
@@ -276,6 +359,14 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         const currentSpeed = physicsState.velocity.length();
         const currentAlt = physicsState.altitude;
 
+        // High-Speed Dive Paper Wing Flutter Oscillation
+        if (physicsState.pitch < -0.22 && currentSpeed > 14) {
+          planeGroup.rotation.z += Math.sin(currentTime * 0.05) * 0.035;
+          if (Math.random() < 0.15) {
+            gameAudio.playFlutterRustle();
+          }
+        }
+
         // Telemetry Store Update
         useGameStore.getState().updateTelemetry(currentDist, currentAlt, currentSpeed);
         if (onTelemetryUpdate) onTelemetryUpdate(currentDist, currentAlt, currentSpeed);
@@ -283,8 +374,8 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Audio update
         gameAudio.updateWindRustle(currentSpeed);
 
-        // Dynamic Weather Shifts
-        const weather = getWeatherLighting(currentDist);
+        // Dynamic Weather Shifts with Biome Support
+        const weather = getWeatherLighting(currentDist, activeLevel.biome);
         scene.background = new THREE.Color(weather.skyColor);
         if (scene.fog && 'near' in scene.fog) {
           (scene.fog as THREE.Fog).color = new THREE.Color(weather.fogColor);

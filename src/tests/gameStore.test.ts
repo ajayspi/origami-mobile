@@ -37,4 +37,10 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().totalStars).toBe(30);
     expect(useGameStore.getState().upgrades.lift).toBe(2);
   });
+
+  it('triggers and tracks active aerobatic stunt', () => {
+    const store = useGameStore.getState();
+    store.triggerStunt('roll');
+    expect(useGameStore.getState().activeStunt).toBe('roll');
+  });
 });

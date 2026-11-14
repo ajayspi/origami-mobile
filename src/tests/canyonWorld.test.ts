@@ -24,6 +24,31 @@ describe('canyonWorld', () => {
     const night = getWeatherLighting(2400);
     expect(night.timeOfDay).toBe('night');
     expect(night.skyColor).toBe('#0f1423');
+
+    // Test biome-specific palettes
+    const sakuraMorning = getWeatherLighting(300, 'sakura_valley');
+    expect(sakuraMorning.skyColor).toBe('#fbcfe8');
+
+    const glacierMorning = getWeatherLighting(300, 'alpine_glacier');
+    expect(glacierMorning.skyColor).toBe('#bae6fd');
+
+    const bambooMorning = getWeatherLighting(300, 'bamboo_forest');
+    expect(bambooMorning.skyColor).toBe('#d1fae5');
+  });
+
+  it('generates biome-specific obstacles (Torii gates, icicle spires, bamboo clusters)', () => {
+    const sakuraLevel = GAME_LEVELS.find(l => l.id === 'level-3')!;
+    const sakuraTrack = generateCanyonTrack(sakuraLevel);
+    expect(sakuraTrack.obstacles.some(o => o.id.startsWith('torii'))).toBe(true);
+    expect(sakuraTrack.ambientParticles).toBeDefined();
+
+    const glacierLevel = GAME_LEVELS.find(l => l.id === 'level-4')!;
+    const glacierTrack = generateCanyonTrack(glacierLevel);
+    expect(glacierTrack.obstacles.some(o => o.id.startsWith('icicle'))).toBe(true);
+
+    const bambooLevel = GAME_LEVELS.find(l => l.id === 'level-2')!;
+    const bambooTrack = generateCanyonTrack(bambooLevel);
+    expect(bambooTrack.obstacles.some(o => o.id.startsWith('bamboo'))).toBe(true);
   });
 
   it('updates dynamic obstacles (windmill rotation, lantern oscillation, geyser eruptions)', () => {
