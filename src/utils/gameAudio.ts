@@ -1,0 +1,218 @@
+// -----------------------------------------------------------------------------
+// Wind Glide Academy — Procedural ASMR Web Audio Synthesizer
+// 100% procedural Web Audio API audio synthesis: zero external audio assets.
+// -----------------------------------------------------------------------------
+
+const PENTATONIC_FREQS = [523.25, 587.33, 659.25, 783.99, 880.00]; // C5, D5, E5, G5, A5
+
+class GameAudioSynthesizer {
+  private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private windSource: AudioBufferSourceNode | null = null;
+  private windFilter: BiquadFilterNode | null = null;
+  private windGain: GainNode | null = null;
+  private currentWindFreq = 300;
+  private initialized = false;
+
+  public init(): void {
+    if (this.initialized && this.ctx) {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return;
+    }
+
+    try {
+      const AudioCtx = (typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext))
+        || (globalThis as any).AudioContext;
+      if (!AudioCtx) return;
+
+      this.ctx = new AudioCtx();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.85;
+      this.masterGain.connect(this.ctx.destination);
+
+      this.setupWindLoop();
+      this.initialized = true;
+    } catch {
+      // Audio not supported or blocked
+    }
+  }
+
+  public isReady(): boolean {
+    return this.initialized && this.ctx !== null;
+  }
+
+  public getCurrentWindFrequency(): number {
+    return this.currentWindFreq;
+  }
+
+  private setupWindLoop(): void {
+    if (!this.ctx || !this.masterGain) return;
+
+    try {
+      const bufferSize = this.ctx.sampleRate * 2; // 2.0s buffer
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Generate pink/white noise
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        data[i] = (b0 + b1 + b2 + white * 0.1) * 0.15;
+      }
+
+      this.windFilter = this.ctx.createBiquadFilter();
+      this.windFilter.type = 'bandpass';
+      this.windFilter.Q.value = 1.8;
+      this.windFilter.frequency.value = 300;
+
+      this.windGain = this.ctx.createGain();
+      this.windGain.gain.value = 0.0;
+
+      this.windSource = this.ctx.createBufferSource();
+      this.windSource.buffer = buffer;
+      this.windSource.loop = true;
+
+      this.windSource.connect(this.windFilter);
+      this.windFilter.connect(this.windGain);
+      this.windGain.connect(this.masterGain);
+
+      this.windSource.start(0);
+    } catch {}
+  }
+
+  public updateWindRustle(airspeed: number): void {
+    if (!this.ctx || !this.windFilter || !this.windGain) return;
+
+    const clampedSpeed = Math.max(0, airspeed);
+    const speedFactor = Math.min(clampedSpeed / 30, 1.0);
+    this.currentWindFreq = 300 + speedFactor * 1900; // 300Hz to 2200Hz
+
+    const targetGain = Math.min(clampedSpeed / 25, 1.0) * 0.28;
+    const now = this.ctx.currentTime;
+
+    try {
+      this.windFilter.frequency.setValueAtTime(this.currentWindFreq, now);
+      this.windGain.gain.setValueAtTime(targetGain, now);
+    } catch {}
+  }
+
+  public playLaunchSnap(): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.035);
+
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.04);
+    } catch {}
+  }
+
+  public playStarChime(pitchIndex = 0): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      const freq = PENTATONIC_FREQS[pitchIndex % PENTATONIC_FREQS.length];
+      const now = this.ctx.currentTime;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch {}
+  }
+
+  public playThermalHum(): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(90, now);
+
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.35, now + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.85);
+    } catch {}
+  }
+
+  public playDeflectionThud(): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.06);
+
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } catch {}
+  }
+
+  public stopFlightAudio(): void {
+    if (!this.ctx || !this.windGain) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.windGain.gain.setValueAtTime(0.0, now);
+    } catch {}
+  }
+}
+
+export const gameAudio = new GameAudioSynthesizer();
