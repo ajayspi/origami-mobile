@@ -28,4 +28,16 @@ describe('gameScreens', () => {
     expect(useGameStore.getState().upgrades.impulse).toBe(2);
     expect(useGameStore.getState().totalStars).toBe(75);
   });
+
+  it('selects kit archetype between jet dart, sacred crane, and celestial dragon', () => {
+    const store = useGameStore.getState();
+    store.selectKit('japanese-01');
+    expect(useGameStore.getState().selectedKitId).toBe('japanese-01');
+
+    store.selectKit('chinese-03');
+    expect(useGameStore.getState().selectedKitId).toBe('chinese-03');
+
+    store.selectKit('aerospace-02');
+    expect(useGameStore.getState().selectedKitId).toBe('aerospace-02');
+  });
 });

@@ -47,7 +47,11 @@ OrigamiStudio Mobile is a dedicated, distraction-free mobile application enginee
      - Pentatonic star collection chimes ($F_5, G_5, A_5, C_6, D_6$).
      - Barrel roll harmonic swoop & loop-the-loop ascending whoosh.
      - Thermal vortex upward hum and gentle obstacle deflection thuds.
-   * **Artisan Hangar**: Switch between completed origami models (e.g., *Falcon Dart* `aerospace-02`) with aerodynamic tuning specs (Glide Ratio, Dihedral Angle, Camber).
+   * **Artisan Hangar & The Flight Trinity**: Choose between 3 distinct authentic flight archetypes on the 3D turntable:
+     - ✈️ **Falcon Dart (`aerospace-02`)**: Supersonic agility, razor-sharp rolls, low parasite drag, and high-speed dive flutter.
+     - 🕊️ **Sacred Peace Crane (`japanese-01`)**: Thermal soaring specialist, wide diamond wingspan with gentle $3\,\text{Hz}$ flapping wing oscillation, and $+38\%$ lift.
+     - 🐉 **Celestial Dragon (`chinese-03`)**: Heavy dive momentum, fiery wind defiance, and serpentine lateral body/tail undulation.
+     - Includes aerodynamic tuning specs (Speed, Glide Ratio, Agility) and washi paper stock customization.
 
 ---
 

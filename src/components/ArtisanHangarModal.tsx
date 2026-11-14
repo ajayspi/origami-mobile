@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { PaperStock, AircraftUpgrades } from '../types/game';
+import { PaperStock, AircraftUpgrades, TRINITY_KITS } from '../types/game';
 import { MobileStage } from './MobileStage';
 import ALL_KITS_DATA from '../data/kits.json';
 import type { OrigamiKit } from '../types/origami';
@@ -11,10 +11,11 @@ interface ArtisanHangarModalProps {
   onClose: () => void;
 }
 
-const ALL_KITS = ALL_KITS_DATA as unknown as OrigamiKit[];
+const kitRecord = ALL_KITS_DATA as unknown as Record<string, OrigamiKit>;
 
 export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, onClose }) => {
   const selectedKitId = useGameStore(s => s.selectedKitId);
+  const selectKit = useGameStore(s => s.selectKit);
   const upgrades = useGameStore(s => s.upgrades);
   const totalStars = useGameStore(s => s.totalStars);
   const activePaperStock = useGameStore(s => s.activePaperStock);
@@ -23,8 +24,9 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
-  const currentKit = ALL_KITS.find(k => k.id === selectedKitId) || ALL_KITS.find(k => k.id === 'aerospace-02') || ALL_KITS[0];
+  const currentKit = kitRecord[selectedKitId] || kitRecord['aerospace-02'] || Object.values(kitRecord)[0];
   const lastStepIdx = Math.max(0, currentKit.steps.length - 1);
+  const activeStats = TRINITY_KITS[selectedKitId] || TRINITY_KITS['aerospace-02'];
 
   const UPGRADE_CONFIGS: { key: keyof AircraftUpgrades; label: string; desc: string; cost: number }[] = [
     { key: 'lift', label: 'Wing Camber Lift', desc: 'Flattens descent glide slope', cost: 20 * upgrades.lift },
@@ -106,6 +108,39 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
 
         {/* Scrollable Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Flight Trinity Model Selector */}
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>Choose Aircraft Archetype</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {Object.values(TRINITY_KITS).map(m => {
+                const isSelected = selectedKitId === m.kitId;
+                return (
+                  <button
+                    key={m.kitId}
+                    onClick={() => selectKit(m.kitId)}
+                    style={{
+                      padding: '10px 6px',
+                      borderRadius: 16,
+                      border: isSelected ? '2px solid #0ea5e9' : '1px solid rgba(0,0,0,0.08)',
+                      backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      cursor: 'pointer',
+                      boxShadow: isSelected ? '0 4px 12px rgba(14, 165, 233, 0.2)' : 'none'
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>{m.icon}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: isSelected ? '#0369a1' : '#1e293b', textAlign: 'center' }}>
+                      {m.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* 3D Turntable Preview (Reusing MobileStage) */}
           <div
             style={{
@@ -137,7 +172,38 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
                 borderRadius: 8
               }}
             >
-              {currentKit.title}
+              {activeStats.icon} {currentKit.title}
+            </div>
+          </div>
+
+          {/* Archetype Flight Specs */}
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 16,
+              backgroundColor: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
+              "{activeStats.description}"
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>SPEED</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#0284c7' }}>{Math.round(activeStats.speedMultiplier * 100)}%</div>
+              </div>
+              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>GLIDE / LIFT</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#16a34a' }}>+{Math.round((activeStats.liftMultiplier - 1) * 100)}%</div>
+              </div>
+              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>AGILITY</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#d97706' }}>{Math.round(activeStats.turnAgility * 100)}%</div>
+              </div>
             </div>
           </div>
 

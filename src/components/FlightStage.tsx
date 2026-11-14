@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
+import { TRINITY_KITS } from '../types/game';
 import { synthesizeKitGeometry } from '../utils/mobileGeometry';
 import { computeAerodynamicStep, checkGlancingDeflection, FlightPhysicsState } from '../utils/flightPhysics';
 import { generateCanyonTrack, updateDynamicObstacles, getWeatherLighting, CanyonTrackData } from '../utils/canyonWorld';
@@ -63,11 +64,15 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     const trackData: CanyonTrackData = generateCanyonTrack(activeLevel);
     scene.add(trackData.trackGroup);
 
-    // Plane Model
+    // Plane Model & Flight Archetype
+    const kitStat = TRINITY_KITS[selectedKitId] || TRINITY_KITS['aerospace-02'];
     const planeGroup = new THREE.Group();
     const planeGeo = synthesizeKitGeometry(selectedKitId || 'aerospace-02', 1.0);
 
     let paperColorHex = 0xd97706; // Falcon Dart default amber
+    if (selectedKitId === 'japanese-01') paperColorHex = 0xef4444; // Orizuru Vermilion Red
+    else if (selectedKitId === 'chinese-03') paperColorHex = 0xf59e0b; // Imperial Golden Dragon
+
     if (activePaperStock === 'gold_foil') paperColorHex = 0xf59e0b;
     else if (activePaperStock === 'sakura') paperColorHex = 0xf43f5e;
     else if (activePaperStock === 'indigo') paperColorHex = 0x3b82f6;
@@ -81,13 +86,18 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     const planeMesh = new THREE.Mesh(planeGeo, planeMat);
     planeMesh.castShadow = true;
-    planeGroup.add(planeMesh);
+
+    // Align forward facing direction in -Z for Japanese Crane and Chinese Dragon
+    if (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') {
+      planeMesh.rotation.y = Math.PI;
+    }
 
     // Subtle edge crease line overlay
     const wireGeo = new THREE.WireframeGeometry(planeGeo);
     const wireMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.22 });
-    planeGroup.add(new THREE.LineSegments(wireGeo, wireMat));
+    planeMesh.add(new THREE.LineSegments(wireGeo, wireMat));
 
+    planeGroup.add(planeMesh);
     planeGroup.position.set(0, 1.8, 0);
     scene.add(planeGroup);
 
@@ -229,7 +239,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         updateCordPoints(planeGroup.position);
       } else if (state === 'flying') {
         // In-flight banking & pitch steering
-        controls.rollInput = Math.max(-1, Math.min(1, dx / 80));
+        controls.rollInput = Math.max(-1, Math.min(1, (dx / 80) * kitStat.turnAgility));
         controls.pitchInput = Math.max(-1, Math.min(1, -dy / 80));
       }
     };
@@ -244,7 +254,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Launch Aircraft!
         const pullRatio = Math.max(0.15, pullBack.distance / 120);
         const impulseMult = 1.0 + upgrades.impulse * 0.12;
-        const launchSpeed = pullRatio * 18.5 * impulseMult;
+        const launchSpeed = pullRatio * 18.5 * impulseMult * kitStat.speedMultiplier;
 
         const launchPitch = 0.18 + (pullBack.dy / 120) * 0.25;
         const launchYaw = -(pullBack.dx / 120) * 0.35;
@@ -299,8 +309,8 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       const currentFlightState = useGameStore.getState().flightState;
 
       if (currentFlightState === 'flying') {
-        const liftMult = 1.0 + upgrades.lift * 0.10;
-        const dragMult = Math.max(0.6, 1.0 - upgrades.drag * 0.08);
+        const liftMult = (1.0 + upgrades.lift * 0.10) * kitStat.liftMultiplier;
+        const dragMult = Math.max(0.4, (1.0 - upgrades.drag * 0.08) * kitStat.dragMultiplier);
 
         // Step Aerodynamics
         physicsState = computeAerodynamicStep(physicsState, controls, dt, liftMult, dragMult);
@@ -359,11 +369,24 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         const currentSpeed = physicsState.velocity.length();
         const currentAlt = physicsState.altitude;
 
-        // High-Speed Dive Paper Wing Flutter Oscillation
-        if (physicsState.pitch < -0.22 && currentSpeed > 14) {
-          planeGroup.rotation.z += Math.sin(currentTime * 0.05) * 0.035;
-          if (Math.random() < 0.15) {
-            gameAudio.playFlutterRustle();
+        // Archetype Kinematic Flight Animations
+        if (selectedKitId === 'japanese-01') {
+          // Sacred Peace Crane: Natural wing-flapping oscillation
+          const flap = Math.sin(currentTime * 0.008) * 0.12;
+          planeMesh.rotation.z = flap;
+          planeMesh.position.y = Math.sin(currentTime * 0.008) * 0.04;
+        } else if (selectedKitId === 'chinese-03') {
+          // Celestial Dragon: Serpentine undulation and tail sway
+          const sway = Math.sin(currentTime * 0.006) * 0.12;
+          planeMesh.rotation.y = Math.PI + sway;
+          planeMesh.rotation.z = Math.cos(currentTime * 0.006) * 0.06;
+        } else {
+          // Falcon Dart: High-Speed Dive Paper Wing Flutter Oscillation
+          if (physicsState.pitch < -0.22 && currentSpeed > 14) {
+            planeGroup.rotation.z += Math.sin(currentTime * 0.05) * 0.035;
+            if (Math.random() < 0.15) {
+              gameAudio.playFlutterRustle();
+            }
           }
         }
 
