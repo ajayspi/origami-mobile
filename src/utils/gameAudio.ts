@@ -28,6 +28,7 @@ class GameAudioSynthesizer {
       if (!AudioCtx) return;
 
       this.ctx = new AudioCtx();
+      if (!this.ctx) return;
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0.85;
       this.masterGain.connect(this.ctx.destination);

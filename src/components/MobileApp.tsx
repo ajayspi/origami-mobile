@@ -353,7 +353,7 @@ export const MobileApp: React.FC = () => {
                 </span>
                 <span style={{ fontSize: 10, color: '#a8a29e' }}>•</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#44403c' }}>
-                  {currentStep.actionName || 'Fold Paper'}
+                  {currentStep.title || currentStep.foldType || 'Fold Paper'}
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.4, color: '#1c1917', fontWeight: 600 }}>
@@ -369,20 +369,25 @@ export const MobileApp: React.FC = () => {
             foldFactor={foldFactor}
             isPlaying={isPlaying}
             isPancakeFlipped={isPancakeFlipped}
-            onPrevStep={handlePrevStep}
-            onNextStep={handleNextStep}
-            onPlayFold={handlePlayFold}
-            onPancakeFlip={handlePancakeFlip}
-            onScrubFold={(val) => {
+            onPrev={handlePrevStep}
+            onNext={handleNextStep}
+            onTogglePlay={handlePlayFold}
+            onTogglePancakeFlip={handlePancakeFlip}
+            onSeek={(val: number) => {
               setIsPlaying(false);
               setFoldFactor(val);
             }}
           />
 
-          <SanctuaryModal isOpen={isSanctuaryOpen} onClose={() => setIsSanctuaryOpen(false)} />
+          <SanctuaryModal
+            isOpen={isSanctuaryOpen}
+            onClose={() => setIsSanctuaryOpen(false)}
+            onResetFold={() => setFoldFactor(0.0)}
+          />
           <KitSelectorModal
             isOpen={isKitSelectorOpen}
-            currentKitId={activeKit.id}
+            kits={ALL_KITS}
+            activeKitId={activeKit.id}
             onSelectKit={(kit) => {
               setActiveKit(kit);
               setIsKitSelectorOpen(false);

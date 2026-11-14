@@ -286,10 +286,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Dynamic Weather Shifts
         const weather = getWeatherLighting(currentDist);
         scene.background = new THREE.Color(weather.skyColor);
-        if (scene.fog) {
-          scene.fog.color = new THREE.Color(weather.fogColor);
-          scene.fog.near = weather.fogNear;
-          scene.fog.far = weather.fogFar;
+        if (scene.fog && 'near' in scene.fog) {
+          (scene.fog as THREE.Fog).color = new THREE.Color(weather.fogColor);
+          (scene.fog as THREE.Fog).near = weather.fogNear;
+          (scene.fog as THREE.Fog).far = weather.fogFar;
         }
         sunLight.color = new THREE.Color(weather.sunColor);
         sunLight.intensity = weather.sunIntensity;

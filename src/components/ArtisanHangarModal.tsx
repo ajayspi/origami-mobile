@@ -3,7 +3,7 @@ import { useGameStore } from '../store/useGameStore';
 import { PaperStock, AircraftUpgrades } from '../types/game';
 import { MobileStage } from './MobileStage';
 import ALL_KITS_DATA from '../data/kits.json';
-import { Kit } from '../types/origami';
+import type { OrigamiKit } from '../types/origami';
 import { X, Sparkles, ArrowUpCircle } from 'lucide-react';
 
 interface ArtisanHangarModalProps {
@@ -11,7 +11,7 @@ interface ArtisanHangarModalProps {
   onClose: () => void;
 }
 
-const ALL_KITS = ALL_KITS_DATA as unknown as Kit[];
+const ALL_KITS = ALL_KITS_DATA as unknown as OrigamiKit[];
 
 export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, onClose }) => {
   const selectedKitId = useGameStore(s => s.selectedKitId);
