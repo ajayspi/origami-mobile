@@ -1,21 +1,23 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
-import { ChevronLeft, Wrench, MapPin, Sparkles, Wind } from 'lucide-react';
+import { TRINITY_KITS } from '../types/game';
+import { Wrench, MapPin, Sparkles, Wind, FolderOpen } from 'lucide-react';
 
 interface FlightHUDProps {
-  onBackToStudio: () => void;
+  onOpenKitSelector: () => void;
   onOpenHangar: () => void;
   onOpenLevelSelect: () => void;
 }
 
 export const FlightHUD: React.FC<FlightHUDProps> = ({
-  onBackToStudio,
+  onOpenKitSelector,
   onOpenHangar,
   onOpenLevelSelect
 }) => {
   const flightState = useGameStore(s => s.flightState);
   const activeLevelId = useGameStore(s => s.activeLevelId);
+  const selectedKitId = useGameStore(s => s.selectedKitId);
   const distance = useGameStore(s => s.distance);
   const altitude = useGameStore(s => s.altitude);
   const speed = useGameStore(s => s.speed);
@@ -25,6 +27,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const activeStunt = useGameStore(s => s.activeStunt);
 
   const activeLevel = GAME_LEVELS.find(l => l.id === activeLevelId) || GAME_LEVELS[0];
+  const activeTrinity = TRINITY_KITS[selectedKitId] || { icon: '✈️', name: 'Falcon Dart' };
   const progressPercent = Math.min(100, Math.round((distance / activeLevel.goalDistance) * 100));
 
   return (
@@ -46,9 +49,9 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         }}
       >
         <button
-          onClick={onBackToStudio}
+          onClick={onOpenKitSelector}
           style={{
-            background: 'rgba(255, 255, 255, 0.92)',
+            background: 'rgba(255, 255, 255, 0.95)',
             border: 'none',
             borderRadius: 20,
             padding: '8px 14px',
@@ -58,11 +61,14 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
             cursor: 'pointer'
           }}
         >
-          <ChevronLeft size={16} /> Studio
+          <span style={{ fontSize: 16 }}>{activeTrinity.icon}</span>
+          <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {activeTrinity.name}
+          </span>
         </button>
 
         <button
@@ -237,20 +243,90 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         <div
           style={{
             position: 'absolute',
-            bottom: 'calc(env(safe-area-inset-bottom) + 32px)',
-            left: 20,
-            right: 20,
-            textAlign: 'center',
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(10px)',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: 24,
-            fontSize: 14,
-            fontWeight: 700
+            bottom: 'calc(env(safe-area-inset-bottom) + 20px)',
+            left: 16,
+            right: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10,
+            pointerEvents: 'auto'
           }}
         >
-          👉 Drag backward on screen to build tension & launch!
+          {/* Quick Model Selector Pills */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(12px)',
+              padding: '6px 8px',
+              borderRadius: 24,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,255,255,0.15)'
+            }}
+          >
+            {Object.values(TRINITY_KITS).map(m => {
+              const isSelected = selectedKitId === m.kitId;
+              return (
+                <button
+                  key={m.kitId}
+                  onClick={() => useGameStore.getState().selectKit(m.kitId)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 18,
+                    border: 'none',
+                    backgroundColor: isSelected ? '#0ea5e9' : 'transparent',
+                    color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    boxShadow: isSelected ? '0 2px 8px rgba(14,165,233,0.5)' : 'none'
+                  }}
+                >
+                  <span>{m.icon}</span>
+                  <span>{m.name.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+
+            <button
+              onClick={onOpenKitSelector}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 18,
+                border: 'none',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                color: '#ffffff',
+                fontSize: 11,
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              54 Kits...
+            </button>
+          </div>
+
+          {/* Drag to Start Callout */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(2, 132, 199, 0.95))',
+              color: '#ffffff',
+              padding: '12px 24px',
+              borderRadius: 24,
+              fontSize: 15,
+              fontWeight: 900,
+              boxShadow: '0 6px 20px rgba(14, 165, 233, 0.45)',
+              textAlign: 'center',
+              letterSpacing: 0.2
+            }}
+          >
+            🎯 Drag backward to aim & release to start!
+          </div>
         </div>
       )}
 

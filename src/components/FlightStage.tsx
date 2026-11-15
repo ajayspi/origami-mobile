@@ -35,10 +35,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     // Three.js Scene Setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xa5c9eb);
-    scene.fog = new THREE.Fog(0xe0ecf8, 20, 120);
+    scene.background = new THREE.Color(0x7dd3fc);
+    scene.fog = new THREE.Fog(0xe0f2fe, 30, 175);
 
-    const camera = new THREE.PerspectiveCamera(54, w / h, 0.1, 350);
+    const camera = new THREE.PerspectiveCamera(54, w / h, 0.1, 450);
     camera.position.set(0, 3.2, 7.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -49,22 +49,40 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     container.appendChild(renderer.domElement);
 
-    // Directional Lighting
-    const ambientLight = new THREE.AmbientLight(0xfff6ea, 0.65);
-    scene.add(ambientLight);
+    // Warm Ambient & Hemisphere Lighting
+    const hemiLight = new THREE.HemisphereLight(0xfff8ee, 0x8899aa, 0.85);
+    scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff8e7, 1.25);
-    sunLight.position.set(15, 30, 20);
+    const sunLight = new THREE.DirectionalLight(0xfff8e7, 1.4);
+    sunLight.position.set(25, 45, 25);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 5;
+    sunLight.shadow.camera.far = 180;
+    sunLight.shadow.camera.left = -30;
+    sunLight.shadow.camera.right = 30;
+    sunLight.shadow.camera.top = 30;
+    sunLight.shadow.camera.bottom = -30;
     scene.add(sunLight);
+
+    // Stylized Origami Sun Disc at Horizon
+    const sunDiscGeo = new THREE.CircleGeometry(26, 24);
+    const sunDiscMat = new THREE.MeshBasicMaterial({
+      color: 0xfef08a,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.92
+    });
+    const sunDisc = new THREE.Mesh(sunDiscGeo, sunDiscMat);
+    sunDisc.position.set(20, 60, -320);
+    scene.add(sunDisc);
 
     // Generate Canyon Track
     const trackData: CanyonTrackData = generateCanyonTrack(activeLevel);
     scene.add(trackData.trackGroup);
 
-    // Plane Model & Flight Archetype
+    // Plane Model & Flight Archetype (Authentic Matte Paper Material)
     const kitStat = TRINITY_KITS[selectedKitId] || TRINITY_KITS['aerospace-02'];
     const planeGroup = new THREE.Group();
     const planeGeo = synthesizeKitGeometry(selectedKitId || 'aerospace-02', 1.0);
@@ -79,8 +97,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     const planeMat = new THREE.MeshStandardMaterial({
       color: paperColorHex,
-      roughness: 0.72,
-      metalness: activePaperStock === 'gold_foil' ? 0.65 : 0.05,
+      roughness: 0.82,
+      metalness: activePaperStock === 'gold_foil' ? 0.75 : 0.04,
+      flatShading: true,
       side: THREE.DoubleSide
     });
 
@@ -92,40 +111,65 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       planeMesh.rotation.y = Math.PI;
     }
 
-    // Subtle edge crease line overlay
-    const wireGeo = new THREE.WireframeGeometry(planeGeo);
-    const wireMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.22 });
-    planeMesh.add(new THREE.LineSegments(wireGeo, wireMat));
-
     planeGroup.add(planeMesh);
     planeGroup.position.set(0, 1.8, 0);
     scene.add(planeGroup);
 
-    // Slingshot Runway Launchpad
+    // Artisan Papercraft Runway Launchpad
     const runwayGroup = new THREE.Group();
-    const padGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.2, 32);
-    const padMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.8 });
-    const pad = new THREE.Mesh(padGeo, padMat);
-    pad.position.set(0, 0.1, 0);
-    pad.receiveShadow = true;
-    runwayGroup.add(pad);
+    const rampMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.85, flatShading: true });
+    const rampRailingMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.7, flatShading: true });
 
-    // Slingshot Pillars
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
-    const pillarGeo = new THREE.CylinderGeometry(0.08, 0.1, 1.8, 16);
+    // Main angled wooden runway deck
+    const deckGeo = new THREE.BoxGeometry(4.0, 0.25, 6.5);
+    const deck = new THREE.Mesh(deckGeo, rampMat);
+    deck.position.set(0, 0.25, 1.4);
+    deck.receiveShadow = true;
+    runwayGroup.add(deck);
+
+    // Red lacquered runway side trims
+    const trimGeo = new THREE.BoxGeometry(0.22, 0.5, 6.5);
+    const leftTrim = new THREE.Mesh(trimGeo, rampRailingMat);
+    leftTrim.position.set(-2.0, 0.38, 1.4);
+    const rightTrim = new THREE.Mesh(trimGeo, rampRailingMat);
+    rightTrim.position.set(2.0, 0.38, 1.4);
+    runwayGroup.add(leftTrim, rightTrim);
+
+    // White Folded Paper Chevron Runway Guide Markings
+    const chevronMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+    for (let c = 0; c < 3; c++) {
+      const arrowGeo = new THREE.PlaneGeometry(0.85, 0.28);
+      arrowGeo.rotateX(-Math.PI / 2);
+      const arrow = new THREE.Mesh(arrowGeo, chevronMat);
+      arrow.position.set(0, 0.4, 0.2 + c * 1.5);
+      runwayGroup.add(arrow);
+    }
+
+    // Slingshot Torii Stanchions with Gold Finials
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.6, flatShading: true });
+    const finialMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.8 });
+    const pillarGeo = new THREE.CylinderGeometry(0.12, 0.16, 2.2, 8);
+
     const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
-    leftPillar.position.set(-1.1, 0.9, -0.4);
+    leftPillar.position.set(-1.4, 1.1, -0.6);
     const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
-    rightPillar.position.set(1.1, 0.9, -0.4);
-    runwayGroup.add(leftPillar, rightPillar);
+    rightPillar.position.set(1.4, 1.1, -0.6);
 
-    // Slingshot Elastic Line
+    const finialGeo = new THREE.SphereGeometry(0.24, 8, 8);
+    const leftFinial = new THREE.Mesh(finialGeo, finialMat);
+    leftFinial.position.set(-1.4, 2.25, -0.6);
+    const rightFinial = new THREE.Mesh(finialGeo, finialMat);
+    rightFinial.position.set(1.4, 2.25, -0.6);
+
+    runwayGroup.add(leftPillar, rightPillar, leftFinial, rightFinial);
+
+    // Slingshot Elastic Line (Vibrant Glowing Cyan Cord)
     const cordGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-1.1, 1.6, -0.4),
+      new THREE.Vector3(-1.4, 1.8, -0.6),
       new THREE.Vector3(0, 1.8, 0),
-      new THREE.Vector3(1.1, 1.6, -0.4)
+      new THREE.Vector3(1.4, 1.8, -0.6)
     ]);
-    const cordMat = new THREE.LineBasicMaterial({ color: 0x0ea5e9, linewidth: 3 });
+    const cordMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 4 });
     const cordLine = new THREE.Line(cordGeo, cordMat);
     runwayGroup.add(cordLine);
     slingshotCordRef.current = cordLine;

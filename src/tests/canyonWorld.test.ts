@@ -15,15 +15,15 @@ describe('canyonWorld', () => {
   it('interpolates weather lighting across morning, sunset, and night', () => {
     const morning = getWeatherLighting(300);
     expect(morning.timeOfDay).toBe('morning');
-    expect(morning.skyColor).toBe('#a5c9eb');
+    expect(morning.skyColor).toBe('#7dd3fc');
 
     const sunset = getWeatherLighting(1400);
     expect(sunset.timeOfDay).toBe('sunset');
-    expect(sunset.skyColor).toBe('#e28a52');
+    expect(sunset.skyColor).toBe('#ea580c');
 
     const night = getWeatherLighting(2400);
     expect(night.timeOfDay).toBe('night');
-    expect(night.skyColor).toBe('#0f1423');
+    expect(night.skyColor).toBe('#0f172a');
 
     // Test biome-specific palettes
     const sakuraMorning = getWeatherLighting(300, 'sakura_valley');
