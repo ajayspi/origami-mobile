@@ -1,5 +1,23 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 import { useGameStore } from '../store/useGameStore';
+import { FlightSplashScreen } from '../components/FlightSplashScreen';
+
+describe('FlightSplashScreen Arcade UI', () => {
+  it('renders title ribbon, high score banner, and launch button', () => {
+    const onStart = vi.fn();
+    const html = renderToString(React.createElement(FlightSplashScreen, {
+      onStartLaunch: onStart,
+      bestDistance: 450,
+      totalStars: 120
+    }));
+
+    expect(html).toContain('ORIGAMI FLIGHT');
+    expect(html).toContain('450m');
+    expect(html).toContain('LAUNCH INTO CANYON');
+  });
+});
 
 describe('gameScreens', () => {
   it('verifies level select modal allows selecting unlocked levels only', () => {
