@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
-import { Trophy, RotateCcw, Wrench, ArrowRight } from 'lucide-react';
+import { Trophy, RotateCcw, Wrench, ArrowRight, Sparkles, Wind, Clock } from 'lucide-react';
 
 interface TouchdownModalProps {
   onFlyAgain: () => void;
@@ -24,146 +24,223 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
 
   const activeLevel = GAME_LEVELS.find(l => l.id === activeLevelId) || GAME_LEVELS[0];
   const goalMet = distance >= activeLevel.goalDistance;
+  const currentIdx = GAME_LEVELS.findIndex(l => l.id === activeLevelId);
+  const hasNext = currentIdx >= 0 && currentIdx < GAME_LEVELS.length - 1;
+
+  // Star Rating Calculation (1-3 stars)
+  const starCount = distance >= activeLevel.goalDistance ? 3 : distance >= activeLevel.goalDistance * 0.6 ? 2 : 1;
 
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.82)',
+        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 50,
-        padding: 24
+        zIndex: 100,
+        padding: 20
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: 340,
-          backgroundColor: '#faf8f5',
-          borderRadius: 28,
-          padding: 24,
+          maxWidth: 380,
+          background: 'linear-gradient(165deg, #fffbeb 0%, #fef3c7 60%, #fed7aa 100%)',
+          borderRadius: 32,
+          border: '4px solid #b45309',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.9)',
+          padding: '28px 24px 24px',
           textAlign: 'center',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255,255,255,0.4)'
+          position: 'relative'
         }}
       >
+        {/* Top Trophy / Medal Seal */}
         <div
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: goalMet ? '#fef08a' : '#e2e8f0',
-            color: goalMet ? '#b45309' : '#475569',
+            width: 76,
+            height: 76,
+            borderRadius: 38,
+            background: goalMet
+              ? 'linear-gradient(135deg, #fef08a, #f59e0b)'
+              : 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+            border: '4px solid #ffffff',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 16px',
-            fontSize: 32
+            margin: '-56px auto 14px',
+            fontSize: 38
           }}
         >
           {goalMet ? '🏆' : '🛬'}
         </div>
 
-        <h2 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 6px' }}>
-          {goalMet ? 'Level Cleared!' : 'Soft Landing!'}
+        {/* 3-Star Rating */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
+          {[1, 2, 3].map(s => (
+            <span
+              key={s}
+              style={{
+                fontSize: 28,
+                filter: s <= starCount ? 'drop-shadow(0 2px 6px rgba(245, 158, 11, 0.6))' : 'grayscale(1)',
+                opacity: s <= starCount ? 1 : 0.35,
+                transform: s <= starCount ? 'scale(1.1)' : 'none'
+              }}
+            >
+              ⭐
+            </span>
+          ))}
+        </div>
+
+        <h2
+          style={{
+            fontSize: 23,
+            fontWeight: 900,
+            color: '#1c1917',
+            margin: '0 0 4px',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5
+          }}
+        >
+          {goalMet ? 'Mission Accomplished!' : 'Graceful Touchdown!'}
         </h2>
 
-        <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px' }}>
+        <p style={{ fontSize: 13, color: '#78716c', margin: '0 0 20px', fontWeight: 600 }}>
           {goalMet
-            ? `Congratulations! You reached ${distance}m in ${activeLevel.name}.`
-            : `You glided ${distance}m. Keep practicing to reach the ${activeLevel.goalDistance}m goal!`}
+            ? `Outstanding! You cleared the ${activeLevel.name} gorge!`
+            : `You glided ${distance}m. Practice your pitch to conquer the ${activeLevel.goalDistance}m goal!`}
         </p>
 
-        {/* Stats Grid */}
+        {/* Scorecard Grid */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 12,
-            marginBottom: 24
+            gap: 10,
+            marginBottom: 20
           }}
         >
-          <div style={{ backgroundColor: '#f1f5f9', padding: '12px 8px', borderRadius: 16 }}>
-            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>DISTANCE</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#0ea5e9' }}>{distance}m</div>
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 18,
+              border: '2px solid #e5e7eb',
+              padding: '12px 10px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#0369a1', textTransform: 'uppercase' }}>
+              DISTANCE FLOWN
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: '#0284c7', marginTop: 2 }}>
+              {distance}m
+            </div>
+            <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700 }}>
+              GOAL: {activeLevel.goalDistance}m
+            </div>
           </div>
-          <div style={{ backgroundColor: '#f1f5f9', padding: '12px 8px', borderRadius: 16 }}>
-            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>STARS WON</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#f59e0b' }}>+{starsCollected} ⭐</div>
+
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 18,
+              border: '2px solid #e5e7eb',
+              padding: '12px 10px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#b45309', textTransform: 'uppercase' }}>
+              STARS COLLECTED
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: '#d97706', marginTop: 2 }}>
+              +{starsCollected} ⭐
+            </div>
+            <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700 }}>
+              {thermalsCaught} Thermals Caught
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Pushable Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {goalMet && (
+          {goalMet && hasNext && (
             <button
               onClick={onNextLevel}
               style={{
                 width: '100%',
-                height: 48,
-                backgroundColor: '#0ea5e9',
-                color: '#ffffff',
+                padding: '14px',
+                borderRadius: 18,
                 border: 'none',
-                borderRadius: 24,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
                 fontSize: 15,
-                fontWeight: 800,
+                fontWeight: 900,
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(14, 165, 233, 0.4)'
+                boxShadow: '0 4px 0 #047857, 0 8px 20px rgba(16, 185, 129, 0.35)',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
               }}
             >
-              Next Level <ArrowRight size={18} />
+              Next Expedition <ArrowRight size={18} />
             </button>
           )}
 
-          <button
-            onClick={onFlyAgain}
-            style={{
-              width: '100%',
-              height: 48,
-              backgroundColor: '#1e293b',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: 24,
-              fontSize: 15,
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              cursor: 'pointer'
-            }}
-          >
-            <RotateCcw size={18} /> Fly Again
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={onFlyAgain}
+              style={{
+                flex: 1,
+                padding: '13px',
+                borderRadius: 18,
+                border: 'none',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: '#ffffff',
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: '0 4px 0 #b45309, 0 8px 18px rgba(245, 158, 11, 0.35)',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
+              }}
+            >
+              <RotateCcw size={16} /> Fly Again
+            </button>
 
-          <button
-            onClick={onOpenHangar}
-            style={{
-              width: '100%',
-              height: 44,
-              backgroundColor: 'transparent',
-              color: '#0284c7',
-              border: '1px solid #bae6fd',
-              borderRadius: 22,
-              fontSize: 14,
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              cursor: 'pointer'
-            }}
-          >
-            <Wrench size={16} /> Tuning Workshop
-          </button>
+            <button
+              onClick={onOpenHangar}
+              style={{
+                flex: 1,
+                padding: '13px',
+                borderRadius: 18,
+                border: '2px solid #b45309',
+                background: '#ffffff',
+                color: '#78350f',
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: '0 4px 0 #d97706',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
+              }}
+            >
+              <Wrench size={16} /> Workshop
+            </button>
+          </div>
         </div>
       </div>
     </div>

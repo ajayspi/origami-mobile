@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
-import { X, Lock, CheckCircle, Trophy, Play } from 'lucide-react';
+import { X, Lock, Trophy, Play, Compass, Wind } from 'lucide-react';
 
 interface LevelSelectModalProps {
   isOpen: boolean;
@@ -22,8 +22,8 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({ isOpen, onCl
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.78)',
+        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -34,31 +34,50 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({ isOpen, onCl
       <div
         style={{
           width: '100%',
-          maxWidth: 380,
-          maxHeight: '85vh',
-          backgroundColor: '#faf8f5',
+          maxWidth: 420,
+          maxHeight: '90vh',
+          background: 'linear-gradient(165deg, #fffbeb 0%, #fef3c7 60%, #fed7aa 100%)',
           borderRadius: 28,
+          border: '4px solid #b45309',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.9)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255,255,255,0.4)'
+          position: 'relative'
         }}
       >
-        {/* Header */}
+        {/* Ornate Header */}
         <div
           style={{
+            background: 'linear-gradient(135deg, #b45309, #78350f)',
             padding: '16px 20px',
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            flexShrink: 0
+            borderBottom: '2px solid #f59e0b',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
           }}
         >
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 900, color: '#1e293b', margin: 0 }}>Campaign Flight Missions</h3>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>Select a flight canyon to conquer</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>🗺️</span>
+            <div>
+              <h2
+                style={{
+                  fontSize: 19,
+                  fontWeight: 900,
+                  color: '#ffffff',
+                  margin: 0,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.4)',
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase'
+                }}
+              >
+                Flight Expeditions
+              </h2>
+              <span style={{ fontSize: 11, color: '#fef08a', fontWeight: 700 }}>
+                SELECT CANYON MISSION TO CONQUER
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -66,21 +85,31 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({ isOpen, onCl
               width: 36,
               height: 36,
               borderRadius: 18,
-              border: 'none',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
+              border: '2px solid rgba(255,255,255,0.4)',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontWeight: 900
             }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Level List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Mission Cards List */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px 18px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12
+          }}
+        >
           {GAME_LEVELS.map(lvl => {
             const isUnlocked = unlockedLevels.includes(lvl.id);
             const isCurrent = activeLevelId === lvl.id;
@@ -98,89 +127,114 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({ isOpen, onCl
                   }
                 }}
                 style={{
-                  padding: 14,
                   borderRadius: 20,
-                  backgroundColor: isCurrent ? '#f0f9ff' : '#ffffff',
-                  border: isCurrent ? '2px solid #0ea5e9' : '1px solid rgba(0,0,0,0.06)',
-                  opacity: isUnlocked ? 1.0 : 0.6,
+                  border: isCurrent
+                    ? '3px solid #f59e0b'
+                    : isUnlocked
+                    ? '2px solid #e5e7eb'
+                    : '2px dashed #cbd5e1',
+                  background: isCurrent
+                    ? 'linear-gradient(135deg, #ffffff, #fef9c3)'
+                    : isUnlocked
+                    ? 'rgba(255, 255, 255, 0.9)'
+                    : 'rgba(241, 245, 249, 0.6)',
+                  padding: 14,
                   cursor: isUnlocked ? 'pointer' : 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                  opacity: isUnlocked ? 1 : 0.65,
+                  boxShadow: isCurrent
+                    ? '0 8px 20px rgba(245, 158, 11, 0.3), 0 4px 0 #d97706'
+                    : isUnlocked
+                    ? '0 4px 10px rgba(0,0,0,0.06), 0 3px 0 #d1d5db'
+                    : 'none',
+                  transform: isCurrent ? 'scale(1.02)' : 'none',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <div style={{ flex: 1, paddingRight: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 900,
-                        color: isUnlocked ? '#0284c7' : '#94a3b8',
-                        backgroundColor: isUnlocked ? '#e0f2fe' : '#f1f5f9',
-                        padding: '2px 8px',
-                        borderRadius: 10
-                      }}
-                    >
-                      LEVEL {lvl.levelNumber}
-                    </span>
-                    {lvl.biome && (
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          color: lvl.biome === 'sakura_valley' ? '#be185d' : lvl.biome === 'alpine_glacier' ? '#0369a1' : lvl.biome === 'bamboo_forest' ? '#15803d' : '#b45309',
-                          backgroundColor: lvl.biome === 'sakura_valley' ? '#fce7f3' : lvl.biome === 'alpine_glacier' ? '#e0f2fe' : lvl.biome === 'bamboo_forest' ? '#dcfce7' : '#fef3c7',
-                          padding: '2px 6px',
-                          borderRadius: 8
-                        }}
-                      >
-                        {lvl.biome === 'sakura_valley' ? '🌸 Sakura' : lvl.biome === 'alpine_glacier' ? '❄️ Glacier' : lvl.biome === 'bamboo_forest' ? '🎋 Bamboo' : '🏜️ Canyon'}
-                      </span>
-                    )}
-                    {cleared && <CheckCircle size={14} color="#10b981" />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 16,
+                      background: isUnlocked
+                        ? 'linear-gradient(135deg, #fed7aa, #fef08a)'
+                        : '#cbd5e1',
+                      border: '2px solid #f59e0b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      color: isUnlocked ? '#b45309' : '#64748b',
+                      fontWeight: 900,
+                      flexShrink: 0
+                    }}
+                  >
+                    {isUnlocked ? lvl.levelNumber : <Lock size={20} />}
                   </div>
 
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b' }}>{lvl.name}</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>Goal: {lvl.goalDistance}m</div>
-                  {best > 0 && (
-                    <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 2 }}>
-                      Best: {best}m
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h3
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 900,
+                          color: '#1c1917',
+                          margin: 0
+                        }}
+                      >
+                        {lvl.name}
+                      </h3>
+                      {cleared && (
+                        <span
+                          style={{
+                            background: '#dcfce7',
+                            color: '#16a34a',
+                            fontSize: 11,
+                            fontWeight: 900,
+                            padding: '2px 8px',
+                            borderRadius: 10,
+                            border: '1px solid #86efac'
+                          }}
+                        >
+                          ✓ CLEARED
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div>
-                  {!isUnlocked ? (
-                    <div
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                      <span style={{ fontSize: 11, color: '#0369a1', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Compass size={13} /> Goal: {lvl.goalDistance}m
+                      </span>
+                      <span style={{ fontSize: 11, color: '#d97706', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Trophy size={13} /> Best: {best}m
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: 11, color: '#78716c', marginTop: 4, fontStyle: 'italic' }}>
+                      {lvl.theme} • {lvl.timeOfDay.toUpperCase()}
+                    </div>
+                  </div>
+
+                  {isUnlocked && (
+                    <button
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: '#f1f5f9',
-                        color: '#94a3b8',
+                        padding: '8px 14px',
+                        borderRadius: 14,
+                        border: 'none',
+                        background: isCurrent ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#0284c7',
+                        color: '#ffffff',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        gap: 4,
+                        boxShadow: isCurrent ? '0 3px 0 #b45309' : '0 3px 0 #0369a1'
                       }}
                     >
-                      <Lock size={18} />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: isCurrent ? '#0ea5e9' : '#e0f2fe',
-                        color: isCurrent ? '#ffffff' : '#0369a1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Play size={18} fill={isCurrent ? '#ffffff' : '#0369a1'} />
-                    </div>
+                      <Play size={13} fill="#ffffff" />
+                      {isCurrent ? 'FLY' : 'GO'}
+                    </button>
                   )}
                 </div>
               </div>

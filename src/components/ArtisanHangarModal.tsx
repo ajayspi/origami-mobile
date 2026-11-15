@@ -4,7 +4,7 @@ import { PaperStock, AircraftUpgrades, TRINITY_KITS } from '../types/game';
 import { MobileStage } from './MobileStage';
 import ALL_KITS_DATA from '../data/kits.json';
 import type { OrigamiKit } from '../types/origami';
-import { X, Sparkles, ArrowUpCircle } from 'lucide-react';
+import { X, Sparkles, ArrowUpCircle, Shield, Wind, Gauge } from 'lucide-react';
 
 interface ArtisanHangarModalProps {
   isOpen: boolean;
@@ -28,18 +28,18 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
   const lastStepIdx = Math.max(0, currentKit.steps.length - 1);
   const activeStats = TRINITY_KITS[selectedKitId] || TRINITY_KITS['aerospace-02'];
 
-  const UPGRADE_CONFIGS: { key: keyof AircraftUpgrades; label: string; desc: string; cost: number }[] = [
-    { key: 'lift', label: 'Wing Camber Lift', desc: 'Flattens descent glide slope', cost: 20 * upgrades.lift },
-    { key: 'drag', label: 'Aerodynamic Polish', desc: 'Reduces parasite drag', cost: 25 * upgrades.drag },
-    { key: 'impulse', label: 'Launcher Tension', desc: 'Boosts max slingshot velocity', cost: 30 * upgrades.impulse },
-    { key: 'thermalMagnet', label: 'Thermal Sensor', desc: 'Expands thermal updraft pull', cost: 25 * upgrades.thermalMagnet }
+  const UPGRADE_CONFIGS: { key: keyof AircraftUpgrades; label: string; desc: string; icon: string; cost: number }[] = [
+    { key: 'lift', label: 'Wing Camber Lift', desc: 'Flattens descent glide slope', icon: '🪶', cost: 20 * upgrades.lift },
+    { key: 'drag', label: 'Aerodynamic Polish', desc: 'Reduces parasite air drag', icon: '✨', cost: 25 * upgrades.drag },
+    { key: 'impulse', label: 'Slingshot Tension', desc: 'Boosts launch throw velocity', icon: '⚡', cost: 30 * upgrades.impulse },
+    { key: 'thermalMagnet', label: 'Thermal Sensor', desc: 'Widens updraft magnetic pull', icon: '🌪️', cost: 25 * upgrades.thermalMagnet }
   ];
 
-  const PAPER_STOCKS: { id: PaperStock; name: string; color: string }[] = [
-    { id: 'washi', name: 'Mulberry Washi', color: '#d97706' },
-    { id: 'gold_foil', name: 'Imperial Gold Foil', color: '#f59e0b' },
-    { id: 'sakura', name: 'Sakura Chiyogami', color: '#f43f5e' },
-    { id: 'indigo', name: 'Indigo Shibori', color: '#3b82f6' }
+  const PAPER_STOCKS: { id: PaperStock; name: string; color: string; desc: string }[] = [
+    { id: 'washi', name: 'Mulberry Washi', color: '#d97706', desc: 'Authentic fiber texture' },
+    { id: 'gold_foil', name: 'Imperial Gold Foil', color: '#f59e0b', desc: 'Shimmering metallic sheen' },
+    { id: 'sakura', name: 'Sakura Chiyogami', color: '#f43f5e', desc: 'Blossom patterned washi' },
+    { id: 'indigo', name: 'Indigo Shibori', color: '#3b82f6', desc: 'Deep tie-dyed mineral wash' }
   ];
 
   return (
@@ -47,8 +47,8 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.78)',
+        backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -59,32 +59,49 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
       <div
         style={{
           width: '100%',
-          maxWidth: 420,
-          maxHeight: '90vh',
-          backgroundColor: '#faf8f5',
+          maxWidth: 440,
+          maxHeight: '92vh',
+          background: 'linear-gradient(165deg, #fffbeb 0%, #fef3c7 60%, #fed7aa 100%)',
           borderRadius: 28,
+          border: '4px solid #b45309',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.9)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255,255,255,0.4)'
+          position: 'relative'
         }}
       >
         {/* Header */}
         <div
           style={{
+            background: 'linear-gradient(135deg, #b45309, #78350f)',
             padding: '16px 20px',
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            flexShrink: 0
+            borderBottom: '2px solid #f59e0b',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
           }}
         >
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 900, color: '#1e293b', margin: 0 }}>Artisan Tuning Workshop</h3>
-            <div style={{ fontSize: 13, color: '#f59e0b', fontWeight: 800, marginTop: 2 }}>
-              ⭐ {totalStars} Available Stars
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>🛠️</span>
+            <div>
+              <h2
+                style={{
+                  fontSize: 19,
+                  fontWeight: 900,
+                  color: '#ffffff',
+                  margin: 0,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.4)',
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase'
+                }}
+              >
+                Artisan Tuning Workshop
+              </h2>
+              <div style={{ fontSize: 11, color: '#fef08a', fontWeight: 800 }}>
+                ⭐ {totalStars} WIND STARS AVAILABLE
+              </div>
             </div>
           </div>
           <button
@@ -93,63 +110,32 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
               width: 36,
               height: 36,
               borderRadius: 18,
-              border: 'none',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
+              border: '2px solid rgba(255,255,255,0.4)',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontWeight: 900
             }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Flight Trinity Model Selector */}
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>Choose Aircraft Archetype</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {Object.values(TRINITY_KITS).map(m => {
-                const isSelected = selectedKitId === m.kitId;
-                return (
-                  <button
-                    key={m.kitId}
-                    onClick={() => selectKit(m.kitId)}
-                    style={{
-                      padding: '10px 6px',
-                      borderRadius: 16,
-                      border: isSelected ? '2px solid #0ea5e9' : '1px solid rgba(0,0,0,0.08)',
-                      backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 4,
-                      cursor: 'pointer',
-                      boxShadow: isSelected ? '0 4px 12px rgba(14, 165, 233, 0.2)' : 'none'
-                    }}
-                  >
-                    <span style={{ fontSize: 24 }}>{m.icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: isSelected ? '#0369a1' : '#1e293b', textAlign: 'center' }}>
-                      {m.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 3D Turntable Preview (Reusing MobileStage) */}
+        {/* Scrollable Workshop Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* 3D Aircraft Showcase Stage */}
           <div
             style={{
-              height: 180,
-              width: '100%',
-              backgroundColor: '#f1f5f9',
+              height: 170,
+              background: 'radial-gradient(circle, #fef9c3 0%, #fed7aa 100%)',
               borderRadius: 20,
+              border: '2px solid #f59e0b',
+              position: 'relative',
               overflow: 'hidden',
-              position: 'relative'
+              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.1)'
             }}
           >
             <MobileStage
@@ -164,64 +150,78 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
                 position: 'absolute',
                 bottom: 8,
                 left: 12,
-                fontSize: 12,
-                fontWeight: 800,
-                color: '#475569',
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                padding: '2px 8px',
-                borderRadius: 8
+                right: 12,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'rgba(255, 255, 255, 0.9)',
+                padding: '4px 10px',
+                borderRadius: 12,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
               }}
             >
-              {activeStats.icon} {currentKit.title}
+              <span style={{ fontSize: 13, fontWeight: 900, color: '#1c1917' }}>
+                {activeStats.icon} {activeStats.name}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#b45309' }}>
+                Drag 3D to Inspect
+              </span>
             </div>
           </div>
 
-          {/* Archetype Flight Specs */}
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 16,
-              backgroundColor: '#ffffff',
-              border: '1px solid rgba(0,0,0,0.06)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8
-            }}
-          >
-            <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
-              "{activeStats.description}"
+          {/* Trinity Quick Switcher */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#78350f', textTransform: 'uppercase', marginBottom: 8 }}>
+              Active Glider Archetype
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>SPEED</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#0284c7' }}>{Math.round(activeStats.speedMultiplier * 100)}%</div>
-              </div>
-              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>GLIDE / LIFT</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#16a34a' }}>+{Math.round((activeStats.liftMultiplier - 1) * 100)}%</div>
-              </div>
-              <div style={{ backgroundColor: '#f8fafc', padding: '6px 4px', borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>AGILITY</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#d97706' }}>{Math.round(activeStats.turnAgility * 100)}%</div>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              {Object.values(TRINITY_KITS).map(m => {
+                const isSelected = selectedKitId === m.kitId;
+                return (
+                  <button
+                    key={m.kitId}
+                    onClick={() => selectKit(m.kitId)}
+                    style={{
+                      padding: '10px 6px',
+                      borderRadius: 16,
+                      border: isSelected ? '3px solid #f59e0b' : '2px solid #e5e7eb',
+                      background: isSelected ? 'linear-gradient(135deg, #ffffff, #fef9c3)' : 'rgba(255, 255, 255, 0.8)',
+                      boxShadow: isSelected ? '0 4px 12px rgba(245, 158, 11, 0.3), 0 3px 0 #d97706' : '0 2px 4px rgba(0,0,0,0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span style={{ fontSize: 22 }}>{m.icon}</span>
+                    <span style={{ fontSize: 11, fontWeight: 900, color: '#1c1917', textAlign: 'center' }}>
+                      {m.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Paper Stock Swatches */}
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>Paper Stock Texture</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-              {PAPER_STOCKS.map(st => {
-                const isSelected = activePaperStock === st.id;
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#78350f', textTransform: 'uppercase', marginBottom: 8 }}>
+              Craft Washi Stock
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {PAPER_STOCKS.map(stock => {
+                const isSelected = activePaperStock === stock.id;
                 return (
                   <button
-                    key={st.id}
-                    onClick={() => setPaperStock(st.id)}
+                    key={stock.id}
+                    onClick={() => setPaperStock(stock.id)}
                     style={{
-                      padding: '10px 12px',
-                      borderRadius: 16,
-                      border: isSelected ? '2px solid #0ea5e9' : '1px solid rgba(0,0,0,0.08)',
-                      backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
+                      padding: '8px 12px',
+                      borderRadius: 14,
+                      border: isSelected ? `2px solid ${stock.color}` : '2px solid #e5e7eb',
+                      background: isSelected ? 'linear-gradient(135deg, #ffffff, #fef9c3)' : '#ffffff',
+                      boxShadow: isSelected ? `0 4px 12px ${stock.color}40, 0 3px 0 ${stock.color}` : '0 2px 4px rgba(0,0,0,0.04)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
@@ -229,50 +229,66 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
                       textAlign: 'left'
                     }}
                   >
-                    <span
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 8,
-                        backgroundColor: st.color,
-                        display: 'inline-block',
-                        flexShrink: 0
-                      }}
-                    />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{st.name}</span>
+                    <div style={{ width: 22, height: 22, borderRadius: 11, background: stock.color, border: '2px solid #ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#1c1917' }}>{stock.name}</div>
+                      <div style={{ fontSize: 9, color: '#78716c' }}>{stock.desc}</div>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Aerodynamic Upgrades List */}
+          {/* Aeronautical Upgrades */}
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>Aerodynamic Tuning</div>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#78350f', textTransform: 'uppercase', marginBottom: 8 }}>
+              Flight Physics Upgrades
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {UPGRADE_CONFIGS.map(cfg => {
                 const currentLevel = upgrades[cfg.key];
-                const isMax = currentLevel >= 5;
-                const canAfford = totalStars >= cfg.cost && !isMax;
+                const canAfford = totalStars >= cfg.cost;
 
                 return (
                   <div
                     key={cfg.key}
                     style={{
-                      padding: 12,
+                      background: 'rgba(255, 255, 255, 0.9)',
                       borderRadius: 18,
-                      backgroundColor: '#ffffff',
-                      border: '1px solid rgba(0,0,0,0.06)',
+                      border: '2px solid #e5e7eb',
+                      padding: '12px 14px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      justifyContent: 'space-between',
+                      boxShadow: '0 3px 8px rgba(0,0,0,0.05), 0 2px 0 #d1d5db'
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>
-                        {cfg.label} <span style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>Lv. {currentLevel}/5</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: '#1c1917' }}>{cfg.label}</span>
+                          <span style={{ fontSize: 10, background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 8, fontWeight: 900 }}>
+                            Lv.{currentLevel}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 10, color: '#78716c', marginTop: 2 }}>{cfg.desc}</div>
+                        {/* Level Pips */}
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                          {[1, 2, 3, 4, 5].map(pip => (
+                            <div
+                              key={pip}
+                              style={{
+                                width: 14,
+                                height: 5,
+                                borderRadius: 3,
+                                background: pip <= currentLevel ? '#f59e0b' : '#e5e7eb'
+                              }}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{cfg.desc}</div>
                     </div>
 
                     <button
@@ -280,19 +296,21 @@ export const ArtisanHangarModal: React.FC<ArtisanHangarModalProps> = ({ isOpen, 
                       onClick={() => spendStarsOnUpgrade(cfg.key, cfg.cost)}
                       style={{
                         padding: '8px 14px',
-                        borderRadius: 20,
+                        borderRadius: 14,
                         border: 'none',
-                        backgroundColor: isMax ? '#f1f5f9' : canAfford ? '#0ea5e9' : '#e2e8f0',
-                        color: isMax ? '#94a3b8' : canAfford ? '#ffffff' : '#94a3b8',
+                        background: canAfford ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#cbd5e1',
+                        color: canAfford ? '#ffffff' : '#64748b',
                         fontSize: 12,
-                        fontWeight: 800,
+                        fontWeight: 900,
                         cursor: canAfford ? 'pointer' : 'not-allowed',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4
+                        gap: 4,
+                        boxShadow: canAfford ? '0 3px 0 #b45309' : 'none'
                       }}
                     >
-                      {isMax ? 'MAX' : `${cfg.cost} ⭐`}
+                      <Sparkles size={13} />
+                      {cfg.cost} ⭐
                     </button>
                   </div>
                 );
