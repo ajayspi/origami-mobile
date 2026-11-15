@@ -543,7 +543,8 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
               fontWeight: 800,
               letterSpacing: 0.3,
               whiteSpace: 'nowrap',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              display: (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches) ? 'block' : 'none'
             }}
           >
             A/D or ◀ ▶ Steer • Space for Boost
@@ -563,7 +564,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             gap: 12,
-            pointerEvents: 'auto'
+            pointerEvents: 'none'
           }}
         >
           {/* Quick Model Selector Pills */}
@@ -577,7 +578,8 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
               backdropFilter: 'blur(12px)',
               padding: '6px 10px',
               borderRadius: 24,
-              boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              pointerEvents: 'auto'
             }}
           >
             {Object.values(TRINITY_KITS).map(m => {
@@ -632,15 +634,16 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
               color: '#ffffff',
               padding: '14px 28px',
               borderRadius: 24,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 900,
               boxShadow: '0 5px 0 #b45309, 0 10px 25px rgba(245, 158, 11, 0.45)',
               textAlign: 'center',
               letterSpacing: 0.5,
-              textTransform: 'uppercase'
+              textTransform: 'uppercase',
+              pointerEvents: 'none'
             }}
           >
-            🏔️ 30m Cliff Edge: Drag Backward to Dive & Soar!
+            🏔️ PULL BACK OR THROW FORWARD TO SOAR! 🦅
           </div>
         </div>
       )}
@@ -658,6 +661,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             border: '3px solid #a7f3d0',
             color: '#ffffff',
             padding: '14px 20px',
+            pointerEvents: 'none',
             borderRadius: 24,
             fontSize: 15,
             fontWeight: 900,

@@ -63,9 +63,7 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
             width: 76,
             height: 76,
             borderRadius: 38,
-            background: goalMet
-              ? 'linear-gradient(135deg, #fef08a, #f59e0b)'
-              : 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+            background: 'linear-gradient(135deg, #fef08a, #f59e0b)',
             border: '4px solid #ffffff',
             boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
             display: 'flex',
@@ -75,7 +73,7 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
             fontSize: 38
           }}
         >
-          {goalMet ? '🏆' : '🛬'}
+          {goalMet ? '🏆' : '🌟'}
         </div>
 
         {/* 3-Star Rating */}
@@ -85,8 +83,8 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
               key={s}
               style={{
                 fontSize: 28,
-                filter: s <= starCount ? 'drop-shadow(0 2px 6px rgba(245, 158, 11, 0.6))' : 'grayscale(1)',
-                opacity: s <= starCount ? 1 : 0.35,
+                filter: 'drop-shadow(0 2px 6px rgba(245, 158, 11, 0.6))',
+                opacity: s <= Math.max(1, starCount) ? 1 : 0.4,
                 transform: s <= starCount ? 'scale(1.1)' : 'none'
               }}
             >
@@ -111,7 +109,7 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
         <p style={{ fontSize: 13, color: '#78716c', margin: '0 0 20px', fontWeight: 600 }}>
           {goalMet
             ? `Outstanding! You cleared the ${activeLevel.name} gorge!`
-            : `You glided ${distance}m. Practice your pitch to conquer the ${activeLevel.goalDistance}m goal!`}
+            : `Splendid flight! You soared ${distance}m! Tip your glider's nose gently upward to float like a leaf! 🍃`}
         </p>
 
         {/* Scorecard Grid */}

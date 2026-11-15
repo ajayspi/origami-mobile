@@ -49,8 +49,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     scene.fog = new THREE.Fog(0xe0f2fe, 30, 175);
 
     const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 450);
-    camera.position.set(0, 31.4, 2.9);
-    camera.lookAt(0, 30.2, -18.0);
+    // Elevated 3/4 horizon camera framing revealing 3D origami paper facets at rest
+    camera.position.set(0.35, 31.65, 3.2);
+    camera.lookAt(0, 30.2, -16.0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setSize(w, h, false);
@@ -367,15 +368,17 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
         if (tension > 0) {
           const effectiveDy = Math.max(0, dy - 20);
-          planeGroup.position.set(-dx * 0.012, 30.2 - effectiveDy * 0.005, effectiveDy * 0.022);
-          planeGroup.rotation.x = 0.15 + (effectiveDy / 100) * 0.35;
+          planeGroup.position.set(-dx * 0.012, 30.2 - effectiveDy * 0.002, effectiveDy * 0.02);
+          planeGroup.rotation.x = 0.15 + (effectiveDy / 100) * 0.25;
           planeGroup.rotation.y = ((selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0) - (dx / 120) * 0.45;
           updateCordPoints(planeGroup.position);
 
-          // Elevated Horizon Camera Framing with Canyon Target Tracking
-          camera.position.set(-dx * 0.004, 31.4 + tension * 0.4, 2.9 + tension * 1.4);
-          camera.lookAt(planeGroup.position.x * 0.3, 30.2 + tension * 0.3, -20.0);
-          camera.fov = 60 + 6.0 * tension;
+          // Compound Camera Dolly & downward lookAt Tracking so aircraft remains prominently framed
+          camera.position.set(-dx * 0.005, 31.65 + tension * 0.8, 3.2 + tension * 2.6);
+          const targetY = planeGroup.position.y + 0.9;
+          const targetZ = -4.0 - (1.0 - tension) * 10.0;
+          camera.lookAt(planeGroup.position.x * 0.35, targetY, targetZ);
+          camera.fov = 60 + 4.0 * tension;
           camera.updateProjectionMatrix();
 
           // Dotted Trajectory Arc Preview
@@ -400,9 +403,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         } else {
           planeGroup.position.set(0, 30.2, 0);
           updateCordPoints(planeGroup.position);
-          camera.position.set(0, 31.4, 2.9);
+          camera.position.set(0.35, 31.65, 3.2);
           camera.fov = 60;
-          camera.lookAt(0, 30.2, -18.0);
+          camera.lookAt(0, 30.2, -16.0);
           camera.updateProjectionMatrix();
           trajectoryDots.forEach(d => (d.visible = false));
         }
@@ -428,14 +431,17 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
       if (state === 'cliff-aim' || state === 'aiming') {
         const tension = computeSlingshotTension(pullBack.distance, 120);
+        const isForwardThrow = pullBack.dy < -30 && Math.abs(pullBack.dy) > Math.abs(pullBack.dx);
         trajectoryDots.forEach(d => (d.visible = false));
 
-        if (tension > 0.05) {
-          const pullRatio = Math.max(0.2, tension);
+        if (tension > 0.05 || isForwardThrow) {
+          const pullRatio = isForwardThrow
+            ? Math.min(1.0, Math.max(0.35, Math.abs(pullBack.dy) / 90))
+            : Math.max(0.2, tension);
           const impulseMult = 1.0 + upgrades.impulse * 0.12;
           const launchSpeed = pullRatio * 20.0 * impulseMult * kitStat.speedMultiplier;
 
-          const launchPitch = 0.15 + (Math.max(0, pullBack.dy - 20) / 100) * 0.25;
+          const launchPitch = isForwardThrow ? 0.18 : (0.15 + (Math.max(0, pullBack.dy - 20) / 100) * 0.25);
           const launchYaw = -(pullBack.dx / 120) * 0.35;
 
           physicsState.position.copy(planeGroup.position);
@@ -462,9 +468,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           planeGroup.rotation.set(0, 0, 0);
           planeMesh.rotation.set(0, (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0, 0);
           updateCordPoints(planeGroup.position);
-          camera.position.set(0, 31.4, 2.9);
+          camera.position.set(0.35, 31.65, 3.2);
           camera.fov = 60;
-          camera.lookAt(0, 30.2, -18.0);
+          camera.lookAt(0, 30.2, -16.0);
           camera.updateProjectionMatrix();
         }
       } else if (state === 'flying') {
@@ -602,7 +608,12 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           }
           const forward = physicsState.velocity.clone().normalize();
           physicsState.velocity.addScaledVector(forward, 24.0 * dt);
-          physicsState.pitch = Math.max(-0.08, physicsState.pitch + 0.15 * dt); // slight climb
+          // Booster Pitch Governor: Allow slight climb up to 34m, then level out so aircraft surges forward down the canyon
+          if (physicsState.position.y > 34.0) {
+            physicsState.pitch = Math.min(0.02, physicsState.pitch);
+          } else {
+            physicsState.pitch = Math.max(-0.08, physicsState.pitch + 0.15 * dt);
+          }
 
           // Animate 3D Origami Rocket Flame
           const flicker = 1.0 + Math.sin(currentTime * 0.05) * 0.35;
@@ -620,6 +631,15 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         physicsState = computeAerodynamicStep(physicsState, controls, dt, liftMult, dragMult);
 
         // -------------------------------------------------------------
+        // THREE-TIER CANYON CEILING & ATMOSPHERIC COMPRESSION DOWNDRAFT
+        // -------------------------------------------------------------
+        if (physicsState.position.y > 38.0) {
+          const overCeiling = physicsState.position.y - 38.0;
+          physicsState.velocity.y -= Math.pow(overCeiling, 1.4) * 5.0 * dt;
+          physicsState.pitch = Math.min(-0.02, physicsState.pitch);
+        }
+
+        // -------------------------------------------------------------
         // CANYON FLIGHT CORRIDOR BOUNDARY CONSTRAINT (Magnetic Air Currents)
         // -------------------------------------------------------------
         const currentZ = physicsState.position.z;
@@ -632,7 +652,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           const pushForce = (Math.abs(lateralOffset) - maxCorridorHalfWidth) * 20.0;
           physicsState.velocity.x += pushDir * pushForce * dt;
           physicsState.roll += pushDir * 2.0 * dt;
-          physicsState.position.x = valleyCenter + Math.sign(lateralOffset) * (maxCorridorHalfWidth + 0.8);
+          // Clamp strictly inside corridor boundary to prevent 60 FPS lateral stutter
+          physicsState.position.x = valleyCenter + Math.sign(lateralOffset) * (maxCorridorHalfWidth - 0.2);
+          physicsState.velocity.x = pushDir * Math.abs(physicsState.velocity.x) * 0.4;
         }
 
         // River Floor Ground Cushion (soar above river without crashing while carrying speed)
@@ -865,7 +887,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         camera.position.x += (targetCamX - camera.position.x) * 0.08;
         camera.position.y += (targetCamY - camera.position.y) * 0.08;
         camera.position.z += (targetCamZ - camera.position.z) * 0.08;
-        camera.lookAt(physicsState.position.x, physicsState.position.y + 0.3, physicsState.position.z - 4.0);
+        // Clamp lookAt vertical pitch so canyon valley remains framed in view even when climbing high
+        const lookAtY = physicsState.position.y > 32.0 ? Math.min(physicsState.position.y - 1.2, 30.5) : (physicsState.position.y + 0.3);
+        camera.lookAt(physicsState.position.x, lookAtY, physicsState.position.z - 4.0);
 
         // Visceral Banking Roll Follow
         camera.rotation.z += physicsState.roll * 0.22;
@@ -881,8 +905,8 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         if (!touchStart.active) {
           camera.fov += (60 - camera.fov) * 0.08;
           camera.updateProjectionMatrix();
-          camera.position.set(0, 31.4 + Math.sin(currentTime * 0.001) * 0.04, 2.9);
-          camera.lookAt(0, 30.2, -18.0);
+          camera.position.set(0.35, 31.65 + Math.sin(currentTime * 0.001) * 0.04, 3.2);
+          camera.lookAt(0, 30.2, -16.0);
           planeGroup.position.set(0, 30.2, 0);
           planeGroup.rotation.set(0, 0, 0);
           planeMesh.rotation.set(0, (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0, 0);

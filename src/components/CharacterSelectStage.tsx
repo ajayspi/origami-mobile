@@ -227,7 +227,7 @@ export const CharacterSelectStage: React.FC<CharacterSelectStageProps> = ({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#cbd5e1', marginBottom: '2px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Wind size={11} color="#38bdf8" /> Glide (Lift Coeff)
+                <Wind size={11} color="#38bdf8" /> 🪶 Floaty Glide
               </span>
               <span>{Math.round(currentCreature.liftMultiplier * 70)}%</span>
             </div>
@@ -247,7 +247,7 @@ export const CharacterSelectStage: React.FC<CharacterSelectStageProps> = ({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#cbd5e1', marginBottom: '2px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Zap size={11} color="#f59e0b" /> Speed (Dive Momentum)
+                <Zap size={11} color="#f59e0b" /> 🔥 Rocket Speed
               </span>
               <span>{Math.round(currentCreature.speedMultiplier * 75)}%</span>
             </div>
@@ -267,7 +267,7 @@ export const CharacterSelectStage: React.FC<CharacterSelectStageProps> = ({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#cbd5e1', marginBottom: '2px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Compass size={11} color="#ec4899" /> Agility (Roll Rate)
+                <Compass size={11} color="#ec4899" /> ⚡ Quick Turns (Agility)
               </span>
               <span>{Math.round(currentCreature.turnAgility * 72)}%</span>
             </div>

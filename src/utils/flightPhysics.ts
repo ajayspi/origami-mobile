@@ -176,6 +176,11 @@ export function checkGlancingDeflection(
             .multiplyScalar(1 - friction)
             .sub(vPerp.multiplyScalar(restitution));
 
+          // If collision would bounce the aircraft backwards (+Z), enforce forward arcade progression (-Z)
+          if (deflectedVelocity.z > -2.0) {
+            deflectedVelocity.z = -Math.max(3.5, Math.abs(velocity.z) * 0.65);
+          }
+
           const speedLoss = 1 - deflectedVelocity.length() / Math.max(0.001, velocity.length());
 
           return {
