@@ -62,6 +62,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   boostCharges: 3,
   isBoosting: false,
   gyroEnabled: false,
+  activePowerNotification: null,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
 
@@ -74,7 +75,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     altitude: 30,
     boostCharges: 3,
     isBoosting: false,
-    steerInput: 0
+    steerInput: 0,
+    activePowerNotification: null
   }),
 
   instantCliffRespawn: () => set({
@@ -84,7 +86,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     altitude: 30,
     boostCharges: 3,
     isBoosting: false,
-    steerInput: 0
+    steerInput: 0,
+    activePowerNotification: null
   }),
 
   selectKit: (selectedKitId: string) => set({ selectedKitId }),
@@ -108,6 +111,32 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ isBoosting: false });
     }, 1200);
     return true;
+  },
+
+  addBoostCharges: (count: number) => {
+    set(state => ({ boostCharges: Math.min(5, state.boostCharges + count) }));
+  },
+
+  collectStars: (count: number) => {
+    const nextCollected = get().starsCollected + count;
+    const nextTotal = get().totalStars + count;
+    try {
+      localStorage.setItem(STORAGE_KEY_STARS, String(nextTotal));
+    } catch {}
+    set({ starsCollected: nextCollected, totalStars: nextTotal });
+  },
+
+  triggerPowerNotification: (name: string, icon: string, subtext?: string) => {
+    const id = Date.now();
+    set({
+      activePowerNotification: { id, name, icon, subtext }
+    });
+    setTimeout(() => {
+      const current = get().activePowerNotification;
+      if (current && current.id === id) {
+        set({ activePowerNotification: null });
+      }
+    }, 2200);
   },
 
   selectLevel: (activeLevelId: string) => {
@@ -217,7 +246,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       starsCollected: 0,
       steerInput: 0,
       boostCharges: 3,
-      isBoosting: false
+      isBoosting: false,
+      activePowerNotification: null
     });
   }
 }));

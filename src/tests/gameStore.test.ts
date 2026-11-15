@@ -37,6 +37,18 @@ describe('GameStore Arcade Flow & 3-Creature Trinity', () => {
     expect(state.speed).toBe(0);
     expect(state.boostCharges).toBe(3);
   });
+
+  it('handles in-air power notifications, boost charges, and multi-star collection', () => {
+    useGameStore.getState().addBoostCharges(2);
+    expect(useGameStore.getState().boostCharges).toBe(5);
+
+    useGameStore.getState().collectStars(25);
+    expect(useGameStore.getState().starsCollected).toBe(25);
+
+    useGameStore.getState().triggerPowerNotification('Air Whirlpool Catapult', '🌪️', '+SUPER SPEED BOOST');
+    expect(useGameStore.getState().activePowerNotification?.name).toBe('Air Whirlpool Catapult');
+    expect(useGameStore.getState().activePowerNotification?.icon).toBe('🌪️');
+  });
 });
 
 describe('useGameStore legacy actions', () => {

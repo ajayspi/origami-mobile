@@ -17,11 +17,12 @@ export interface FlightControls {
 }
 
 export interface ObstacleBounds {
-  type: 'solid' | 'thermal' | 'geyser' | 'star' | 'ring';
+  type: 'solid' | 'thermal' | 'geyser' | 'star' | 'ring' | 'whirlpool' | 'speed_gate' | 'loop_ring' | 'surprise_orb';
   center: THREE.Vector3;
   radius: number;
   height?: number;
   normal?: THREE.Vector3;
+  collected?: boolean;
 }
 
 export interface DeflectionResult {
@@ -154,6 +155,7 @@ export function checkGlancingDeflection(
   obstacles: ObstacleBounds[]
 ): DeflectionResult {
   for (const obs of obstacles) {
+    if (obs.collected) continue;
     const dist = position.distanceTo(obs.center);
     if (dist <= obs.radius) {
       if (obs.type === 'solid') {

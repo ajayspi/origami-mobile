@@ -121,6 +121,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const activeStunt = useGameStore(s => s.activeStunt);
   const boostCharges = useGameStore(s => s.boostCharges);
   const isBoosting = useGameStore(s => s.isBoosting);
+  const activePowerNotification = useGameStore(s => s.activePowerNotification);
   const steerInput = useGameStore(s => s.steerInput);
   const setSteerInput = useGameStore(s => s.setSteerInput);
   const activateBoost = useGameStore(s => s.activateBoost);
@@ -213,6 +214,27 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
           <MapPin size={14} /> Mission {activeLevel.levelNumber}
         </button>
 
+        {/* Thermals Chained Mini Badge */}
+        {thermalsCaught > 0 && (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+              border: '2px solid #38bdf8',
+              borderRadius: 18,
+              padding: '6px 10px',
+              fontSize: 12,
+              fontWeight: 900,
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              boxShadow: '0 3px 0 #075985, 0 6px 12px rgba(0,0,0,0.25)'
+            }}
+          >
+            <Wind size={13} /> {thermalsCaught}
+          </div>
+        )}
+
         {/* Workshop & Wind Stars Badge */}
         <button
           onClick={onOpenHangar}
@@ -237,6 +259,43 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
 
       {/* Flight Progress Track Ribbon & Telemetry Gauges */}
       {flightState === 'flying' && <FlightTelemetry goalDistance={activeLevel.goalDistance} />}
+
+      {/* Active In-Air Power / Whirlpool / Surprise Floating Celebration Toast */}
+      {flightState === 'flying' && activePowerNotification && (
+        <div
+          key={activePowerNotification.id}
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top) + 120px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+            border: '3px solid #fef08a',
+            color: '#ffffff',
+            padding: '10px 24px',
+            borderRadius: 28,
+            fontSize: 14,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            boxShadow: '0 8px 30px rgba(234, 88, 12, 0.65)',
+            letterSpacing: 0.5,
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span style={{ fontSize: 24 }}>{activePowerNotification.icon}</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ textTransform: 'uppercase', lineHeight: 1.2 }}>{activePowerNotification.name}</div>
+            {activePowerNotification.subtext && (
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#fef08a' }}>
+                {activePowerNotification.subtext}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Thruster Booster Active Banner */}
       {flightState === 'flying' && isBoosting && (
@@ -300,7 +359,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: thermalsCaught > 0 ? 'calc(env(safe-area-inset-top) + 200px)' : 'calc(env(safe-area-inset-top) + 165px)',
+            top: 'calc(env(safe-area-inset-top) + 165px)',
             left: '50%',
             transform: 'translateX(-50%)',
             background: 'linear-gradient(135deg, #15803d, #166534)',
@@ -318,31 +377,6 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
           }}
         >
           <Smartphone size={13} color="#86efac" /> TILT PHONE TO STEER
-        </div>
-      )}
-
-      {/* Thermal Updraft Banner */}
-      {flightState === 'flying' && thermalsCaught > 0 && !activeStunt && !isBoosting && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top) + 165px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            border: '2px solid #fef08a',
-            color: '#ffffff',
-            padding: '6px 16px',
-            borderRadius: 20,
-            fontSize: 12,
-            fontWeight: 900,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            boxShadow: '0 6px 18px rgba(245, 158, 11, 0.4)'
-          }}
-        >
-          <Wind size={15} /> THERMAL CHAIN x{thermalsCaught} (+{starsCollected} ⭐)
         </div>
       )}
 
@@ -496,14 +530,20 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
           <div
             style={{
               position: 'absolute',
-              bottom: 'calc(env(safe-area-inset-bottom) + 26px)',
-              left: 140,
-              right: 140,
-              textAlign: 'center',
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: 10,
+              bottom: 'calc(env(safe-area-inset-bottom) + 88px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '5px 16px',
+              borderRadius: 16,
+              backgroundColor: 'rgba(15, 23, 42, 0.72)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 11,
               fontWeight: 800,
-              textShadow: '0 2px 6px rgba(0,0,0,0.8)'
+              letterSpacing: 0.3,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none'
             }}
           >
             A/D or ◀ ▶ Steer • Space for Boost

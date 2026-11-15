@@ -5,7 +5,7 @@ import { GAME_LEVELS } from '../data/gameLevels';
 import { TRINITY_KITS } from '../types/game';
 import { synthesizeKitGeometry } from '../utils/mobileGeometry';
 import { computeAerodynamicStep, checkGlancingDeflection, FlightPhysicsState } from '../utils/flightPhysics';
-import { generateCanyonTrack, updateDynamicObstacles, getWeatherLighting, CanyonTrackData } from '../utils/canyonWorld';
+import { generateCanyonTrack, updateDynamicObstacles, getWeatherLighting, CanyonTrackData, getCanyonCenter } from '../utils/canyonWorld';
 import { gameAudio } from '../utils/gameAudio';
 import confetti from 'canvas-confetti';
 
@@ -49,8 +49,8 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     scene.fog = new THREE.Fog(0xe0f2fe, 30, 175);
 
     const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 450);
-    camera.position.set(0, 31.8, 4.5);
-    camera.lookAt(0, 30.5, -20.0);
+    camera.position.set(0, 31.4, 2.9);
+    camera.lookAt(0, 30.2, -18.0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setSize(w, h, false);
@@ -121,6 +121,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     if (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') {
       planeMesh.rotation.y = Math.PI;
     }
+    planeMesh.scale.set(1.35, 1.35, 1.35);
 
     planeGroup.add(planeMesh);
 
@@ -216,6 +217,20 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     slingshotCordRef.current = cordLine;
 
     scene.add(runwayGroup);
+
+    // Dotted Aiming Trajectory Preview Arc
+    const trajectoryGroup = new THREE.Group();
+    const NUM_TRAJECTORY_DOTS = 10;
+    const trajectoryDots: THREE.Mesh[] = [];
+    const trajDotGeo = new THREE.SphereGeometry(0.12, 5, 5);
+    const trajDotMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+    for (let d = 0; d < NUM_TRAJECTORY_DOTS; d++) {
+      const dot = new THREE.Mesh(trajDotGeo, trajDotMat);
+      dot.visible = false;
+      trajectoryDots.push(dot);
+      trajectoryGroup.add(dot);
+    }
+    scene.add(trajectoryGroup);
 
     // Wingtip Air Trails (Vortices / Speed Streamers)
     const TRAIL_LENGTH = 20;
@@ -329,9 +344,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       gameAudio.init();
 
       if (state === 'cliff-aim' || state === 'aiming' || state === 'idle') {
-        if (state === 'idle') {
-          useGameStore.getState().setFlightState('aiming');
-        }
+        useGameStore.getState().setFlightState('aiming');
         try {
           container.setPointerCapture(e.pointerId);
         } catch {
@@ -359,19 +372,39 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           planeGroup.rotation.y = ((selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0) - (dx / 120) * 0.45;
           updateCordPoints(planeGroup.position);
 
-          // Elevated Horizon Camera Framing (+8.5 deg upward pitch and FOV 60 -> 68)
-          const aimPitch = computeElevatedAimCamera(0.05, tension);
-          camera.position.set(-dx * 0.003, 31.8 + tension * 0.5, 4.5 + tension * 0.8);
-          camera.rotation.x = aimPitch;
-          camera.fov = 60 + 8.0 * tension;
+          // Elevated Horizon Camera Framing with Canyon Target Tracking
+          camera.position.set(-dx * 0.004, 31.4 + tension * 0.4, 2.9 + tension * 1.4);
+          camera.lookAt(planeGroup.position.x * 0.3, 30.2 + tension * 0.3, -20.0);
+          camera.fov = 60 + 6.0 * tension;
           camera.updateProjectionMatrix();
+
+          // Dotted Trajectory Arc Preview
+          const pullRatio = Math.max(0.2, tension);
+          const impulseMult = 1.0 + upgrades.impulse * 0.12;
+          const launchSpeed = pullRatio * 20.0 * impulseMult * kitStat.speedMultiplier;
+          const launchPitch = 0.15 + (effectiveDy / 100) * 0.25;
+          const launchYaw = -(pullBack.dx / 120) * 0.35;
+          const v0x = -Math.sin(launchYaw) * launchSpeed * 0.5;
+          const v0y = Math.sin(launchPitch) * launchSpeed * 0.65;
+          const v0z = -Math.cos(launchPitch) * launchSpeed;
+
+          for (let d = 0; d < NUM_TRAJECTORY_DOTS; d++) {
+            const t = (d + 1) * 0.12;
+            trajectoryDots[d].position.set(
+              planeGroup.position.x + v0x * t,
+              planeGroup.position.y + v0y * t - 0.5 * 9.81 * t * t * 0.3,
+              planeGroup.position.z + v0z * t
+            );
+            trajectoryDots[d].visible = true;
+          }
         } else {
           planeGroup.position.set(0, 30.2, 0);
           updateCordPoints(planeGroup.position);
-          camera.position.set(0, 31.8, 4.5);
+          camera.position.set(0, 31.4, 2.9);
           camera.fov = 60;
-          camera.lookAt(0, 30.5, -20.0);
+          camera.lookAt(0, 30.2, -18.0);
           camera.updateProjectionMatrix();
+          trajectoryDots.forEach(d => (d.visible = false));
         }
       } else if (state === 'flying') {
         // In-flight banking & pitch steering
@@ -395,6 +428,8 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
       if (state === 'cliff-aim' || state === 'aiming') {
         const tension = computeSlingshotTension(pullBack.distance, 120);
+        trajectoryDots.forEach(d => (d.visible = false));
+
         if (tension > 0.05) {
           const pullRatio = Math.max(0.2, tension);
           const impulseMult = 1.0 + upgrades.impulse * 0.12;
@@ -422,11 +457,14 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           }
         } else {
           // Cancel/Deadband snap back to cliff rest
+          useGameStore.getState().setFlightState('cliff-aim');
           planeGroup.position.set(0, 30.2, 0);
+          planeGroup.rotation.set(0, 0, 0);
+          planeMesh.rotation.set(0, (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0, 0);
           updateCordPoints(planeGroup.position);
-          camera.position.set(0, 31.8, 4.5);
+          camera.position.set(0, 31.4, 2.9);
           camera.fov = 60;
-          camera.lookAt(0, 30.5, -20.0);
+          camera.lookAt(0, 30.2, -18.0);
           camera.updateProjectionMatrix();
         }
       } else if (state === 'flying') {
@@ -510,6 +548,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     let lastTime = performance.now();
     let animId: number;
     let wasBoosting = false;
+    let activeThermalId: string | null = null;
 
     const animate = (currentTime: number) => {
       animId = requestAnimationFrame(animate);
@@ -522,14 +561,16 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         const liftMult = (1.0 + upgrades.lift * 0.10) * kitStat.liftMultiplier;
         const dragMult = Math.max(0.4, (1.0 - upgrades.drag * 0.08) * kitStat.dragMultiplier);
 
-        // Active Steering Left/Right Response
+        // Active Steering Left/Right Response with Wing Auto-Centering
         const storeSteer = useGameStore.getState().steerInput;
-        controls.rollInput = Math.max(-1, Math.min(1, controls.rollInput + storeSteer * kitStat.turnAgility));
-
         if (storeSteer !== 0) {
+          controls.rollInput = storeSteer * kitStat.turnAgility;
           physicsState.roll += storeSteer * 2.8 * dt;
           physicsState.yaw -= storeSteer * 1.6 * dt;
           physicsState.velocity.x += Math.sin(physicsState.roll) * 8.0 * dt;
+        } else if (!activeStunt) {
+          controls.rollInput = 0;
+          physicsState.roll *= Math.pow(0.85, dt * 60);
         }
 
         // Active Gyroscope Tilt Steering (Roll & Pitch)
@@ -578,6 +619,30 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Step Aerodynamics
         physicsState = computeAerodynamicStep(physicsState, controls, dt, liftMult, dragMult);
 
+        // -------------------------------------------------------------
+        // CANYON FLIGHT CORRIDOR BOUNDARY CONSTRAINT (Magnetic Air Currents)
+        // -------------------------------------------------------------
+        const currentZ = physicsState.position.z;
+        const valleyCenter = getCanyonCenter(currentZ);
+        const lateralOffset = physicsState.position.x - valleyCenter;
+        const maxCorridorHalfWidth = 11.0; // Playable canyon valley width
+
+        if (Math.abs(lateralOffset) > maxCorridorHalfWidth) {
+          const pushDir = -Math.sign(lateralOffset);
+          const pushForce = (Math.abs(lateralOffset) - maxCorridorHalfWidth) * 20.0;
+          physicsState.velocity.x += pushDir * pushForce * dt;
+          physicsState.roll += pushDir * 2.0 * dt;
+          physicsState.position.x = valleyCenter + Math.sign(lateralOffset) * (maxCorridorHalfWidth + 0.8);
+        }
+
+        // River Floor Ground Cushion (soar above river without crashing while carrying speed)
+        const floorMinY = 1.2;
+        if (physicsState.position.y < floorMinY && physicsState.velocity.length() > 4.0) {
+          physicsState.position.y = floorMinY;
+          physicsState.velocity.y = Math.max(1.8, physicsState.velocity.y + 16.0 * dt);
+          physicsState.pitch = Math.max(-0.02, physicsState.pitch + 0.2 * dt);
+        }
+
         // Execute Active Aerobatic Stunt
         if (activeStunt) {
           activeStunt.elapsed += dt;
@@ -596,32 +661,113 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           }
         }
 
-        // Check Obstacle Collisions
-        const collision = checkGlancingDeflection(physicsState.position, physicsState.velocity, trackData.obstacles);
+        // -------------------------------------------------------------
+        // IN-AIR POWERS, WHIRLPOOLS, SPEED LOOPS & SURPRISES
+        // -------------------------------------------------------------
+        for (const obs of trackData.obstacles) {
+          if (obs.collected) continue;
+          const dist = physicsState.position.distanceTo(obs.center);
 
-        if (collision.hasCollided) {
-          if (collision.obstacleType === 'solid') {
-            physicsState.velocity.copy(collision.deflectedVelocity);
-            if (!activeStunt || activeStunt.type !== 'roll') {
-              gameAudio.playDeflectionThud();
-            }
-          } else if (collision.obstacleType === 'thermal') {
-            physicsState.velocity.y = Math.min(8.5, physicsState.velocity.y + 4.5);
-            useGameStore.getState().triggerThermal();
-            gameAudio.playThermalHum();
-          } else if (collision.obstacleType === 'geyser') {
-            physicsState.velocity.y = 8.0;
-            gameAudio.playThermalHum();
-          } else if (collision.obstacleType === 'star') {
-            // Find and collect star
-            const star = trackData.obstacles.find(o => o.type === 'star' && !o.collected && physicsState.position.distanceTo(o.center) < 2.0);
-            if (star) {
-              star.collected = true;
-              star.meshGroup.visible = false;
+          if (dist <= obs.radius) {
+            if (obs.type === 'whirlpool') {
+              if (activeThermalId !== obs.id) {
+                activeThermalId = obs.id;
+                const fwd = physicsState.velocity.clone().normalize();
+                if (fwd.lengthSq() < 0.1) fwd.set(0, 0, -1);
+                physicsState.velocity.addScaledVector(fwd, 14.0);
+                physicsState.velocity.y = Math.max(4.0, physicsState.velocity.y + 3.0);
+                physicsState.pitch = Math.max(-0.05, physicsState.pitch + 0.12);
+                gameAudio.playRocketThruster();
+                useGameStore.getState().triggerPowerNotification('Air Whirlpool Catapult', '🌪️', '+SUPER SPEED BOOST');
+                confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+              }
+            } else if (obs.type === 'speed_gate') {
+              obs.collected = true;
+              obs.meshGroup.visible = false;
+              const fwd = physicsState.velocity.clone().normalize();
+              if (fwd.lengthSq() < 0.1) fwd.set(0, 0, -1);
+              physicsState.velocity.addScaledVector(fwd, 10.0);
+              useGameStore.getState().addBoostCharges(1);
+              gameAudio.playRocketThruster();
+              useGameStore.getState().triggerPowerNotification('Accelerator Gate', '⚡', '+1 ROCKET CHARGE');
+            } else if (obs.type === 'loop_ring') {
+              obs.collected = true;
+              obs.meshGroup.visible = false;
+              triggerStunt('loop');
+              useGameStore.getState().collectStars(25);
+              gameAudio.playStarChime(useGameStore.getState().starsCollected);
+              useGameStore.getState().triggerPowerNotification('Acrobatic Loop-the-Loop', '🔄', '+25 STARS & CLIMB');
+            } else if (obs.type === 'surprise_orb') {
+              obs.collected = true;
+              obs.meshGroup.visible = false;
+              confetti({ particleCount: 65, spread: 90, origin: { y: 0.5 } });
+
+              const surprises = [
+                {
+                  name: 'Mega Rocket Ignition',
+                  icon: '🚀',
+                  action: () => {
+                    useGameStore.getState().addBoostCharges(3);
+                    useGameStore.getState().activateBoost();
+                  }
+                },
+                {
+                  name: 'Golden Star Shower',
+                  icon: '⭐',
+                  action: () => {
+                    useGameStore.getState().collectStars(50);
+                    gameAudio.playStarChime(useGameStore.getState().starsCollected);
+                  }
+                },
+                {
+                  name: 'Sky Soar Hyper-Glide',
+                  icon: '🪽',
+                  action: () => {
+                    physicsState.velocity.y = 8.5;
+                    physicsState.altitude = Math.min(48, physicsState.altitude + 15);
+                    physicsState.position.y = physicsState.altitude;
+                    gameAudio.playThermalHum();
+                  }
+                }
+              ];
+              const picked = surprises[Math.floor(Math.random() * surprises.length)];
+              picked.action();
+              useGameStore.getState().triggerPowerNotification(picked.name, picked.icon, 'SURPRISE GIFT!');
+            } else if (obs.type === 'thermal') {
+              if (activeThermalId !== obs.id) {
+                activeThermalId = obs.id;
+                useGameStore.getState().triggerThermal();
+                gameAudio.playThermalHum();
+                useGameStore.getState().triggerPowerNotification('Thermal Updraft', '💨', '+SOARING LIFT');
+              }
+              physicsState.velocity.y = Math.min(8.0, physicsState.velocity.y + 14.0 * dt);
+            } else if (obs.type === 'geyser') {
+              physicsState.velocity.y = 8.0;
+              gameAudio.playThermalHum();
+              useGameStore.getState().triggerPowerNotification('Steam Geyser Blast', '🌋', '+VERTICAL BOOST');
+            } else if (obs.type === 'star') {
+              obs.collected = true;
+              obs.meshGroup.visible = false;
               useGameStore.getState().collectStar();
               gameAudio.playStarChime(useGameStore.getState().starsCollected);
+            } else if (obs.type === 'solid') {
+              const collision = checkGlancingDeflection(physicsState.position, physicsState.velocity, [obs]);
+              if (collision.hasCollided) {
+                physicsState.velocity.copy(collision.deflectedVelocity);
+                if (!activeStunt || activeStunt.type !== 'roll') {
+                  gameAudio.playDeflectionThud();
+                }
+              }
             }
           }
+        }
+
+        // Reset thermal tracker when not inside any thermal
+        const insideAnyThermal = trackData.obstacles.some(
+          o => (o.type === 'thermal' || o.type === 'whirlpool') && physicsState.position.distanceTo(o.center) <= o.radius
+        );
+        if (!insideAnyThermal) {
+          activeThermalId = null;
         }
 
         // Apply Position & Rotation to Three.js Plane Mesh
@@ -735,12 +881,19 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         if (!touchStart.active) {
           camera.fov += (60 - camera.fov) * 0.08;
           camera.updateProjectionMatrix();
-          camera.position.set(0, 31.8 + Math.sin(currentTime * 0.001) * 0.05, 4.5);
-          camera.lookAt(0, 30.5, -20.0);
+          camera.position.set(0, 31.4 + Math.sin(currentTime * 0.001) * 0.04, 2.9);
+          camera.lookAt(0, 30.2, -18.0);
           planeGroup.position.set(0, 30.2, 0);
+          planeGroup.rotation.set(0, 0, 0);
+          planeMesh.rotation.set(0, (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0, 0);
           physicsState.position.set(0, 30.2, 0);
           physicsState.velocity.set(0, 0, 0);
+          physicsState.pitch = 0;
+          physicsState.roll = 0;
+          physicsState.yaw = 0;
           physicsState.altitude = 30.2;
+          controls.pitchInput = 0;
+          controls.rollInput = 0;
           updateCordPoints(planeGroup.position);
           if (slingshotCordRef.current) {
             slingshotCordRef.current.visible = true;

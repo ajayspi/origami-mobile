@@ -73,6 +73,13 @@ export interface GameLevel {
   unlockedByDefault: boolean;
 }
 
+export interface ActivePowerNotification {
+  id: number;
+  name: string;
+  icon: string;
+  subtext?: string;
+}
+
 export interface GameState {
   flightState: FlightState;
   selectedKitId: string; // Default: 'aerospace-02' (Falcon Dart)
@@ -92,6 +99,7 @@ export interface GameState {
   boostCharges: number;
   isBoosting: boolean;
   gyroEnabled: boolean;
+  activePowerNotification: ActivePowerNotification | null;
 
   // Actions
   setFlightState: (state: FlightState) => void;
@@ -102,6 +110,9 @@ export interface GameState {
   selectLevel: (levelId: string) => void;
   setSteerInput: (val: number) => void;
   activateBoost: () => boolean;
+  addBoostCharges: (count: number) => void;
+  collectStars: (count: number) => void;
+  triggerPowerNotification: (name: string, icon: string, subtext?: string) => void;
   setGyroEnabled: (enabled: boolean) => void;
   toggleGyro: () => void;
   updateTelemetry: (distance: number, altitude: number, speed: number) => void;
