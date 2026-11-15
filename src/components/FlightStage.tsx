@@ -176,6 +176,36 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     scene.add(runwayGroup);
 
+    // Wingtip Air Trails (Vortices / Speed Streamers)
+    const TRAIL_LENGTH = 20;
+    const leftTrailPositions = new Float32Array(TRAIL_LENGTH * 3);
+    const rightTrailPositions = new Float32Array(TRAIL_LENGTH * 3);
+
+    for (let p = 0; p < TRAIL_LENGTH; p++) {
+      leftTrailPositions[p * 3] = -0.9;
+      leftTrailPositions[p * 3 + 1] = 1.8;
+      leftTrailPositions[p * 3 + 2] = 0;
+      rightTrailPositions[p * 3] = 0.9;
+      rightTrailPositions[p * 3 + 1] = 1.8;
+      rightTrailPositions[p * 3 + 2] = 0;
+    }
+
+    const leftTrailGeo = new THREE.BufferGeometry();
+    leftTrailGeo.setAttribute('position', new THREE.BufferAttribute(leftTrailPositions, 3));
+    const rightTrailGeo = new THREE.BufferGeometry();
+    rightTrailGeo.setAttribute('position', new THREE.BufferAttribute(rightTrailPositions, 3));
+
+    const trailMat = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending
+    });
+
+    const leftTrailLine = new THREE.Line(leftTrailGeo, trailMat);
+    const rightTrailLine = new THREE.Line(rightTrailGeo, trailMat.clone());
+    scene.add(leftTrailLine, rightTrailLine);
+
     // Flight State Tracking
     let physicsState: FlightPhysicsState = {
       position: new THREE.Vector3(0, 1.8, 0),
@@ -484,6 +514,45 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Audio update
         gameAudio.updateWindRustle(currentSpeed);
 
+        // Update Wingtip Air Trails (Vortices)
+        const leftTip = new THREE.Vector3(-0.9, 0.08, 0.1);
+        const rightTip = new THREE.Vector3(0.9, 0.08, 0.1);
+        leftTip.applyMatrix4(planeGroup.matrixWorld);
+        rightTip.applyMatrix4(planeGroup.matrixWorld);
+
+        for (let t = TRAIL_LENGTH - 1; t > 0; t--) {
+          leftTrailPositions[t * 3] = leftTrailPositions[(t - 1) * 3];
+          leftTrailPositions[t * 3 + 1] = leftTrailPositions[(t - 1) * 3 + 1];
+          leftTrailPositions[t * 3 + 2] = leftTrailPositions[(t - 1) * 3 + 2];
+
+          rightTrailPositions[t * 3] = rightTrailPositions[(t - 1) * 3];
+          rightTrailPositions[t * 3 + 1] = rightTrailPositions[(t - 1) * 3 + 1];
+          rightTrailPositions[t * 3 + 2] = rightTrailPositions[(t - 1) * 3 + 2];
+        }
+
+        leftTrailPositions[0] = leftTip.x;
+        leftTrailPositions[1] = leftTip.y;
+        leftTrailPositions[2] = leftTip.z;
+
+        rightTrailPositions[0] = rightTip.x;
+        rightTrailPositions[1] = rightTip.y;
+        rightTrailPositions[2] = rightTip.z;
+
+        (leftTrailGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+        (rightTrailGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+
+        // Trail Opacity scales with speed and aerobatic stunts
+        const speedRatio = Math.max(0, Math.min(1.0, (currentSpeed - 12) / 8));
+        const stuntRatio = activeStunt ? 0.9 : 0.0;
+        const targetTrailOpacity = Math.max(speedRatio * 0.75, stuntRatio);
+        leftTrailLine.material.opacity += (targetTrailOpacity - leftTrailLine.material.opacity) * 0.15;
+        (rightTrailLine.material as THREE.LineBasicMaterial).opacity = leftTrailLine.material.opacity;
+
+        // Dynamic Speed-Responsive Camera FOV (60° base -> up to 74° on steep dives and boosts)
+        const targetFOV = 60 + Math.min(14, Math.max(0, (currentSpeed - 10) * 1.15));
+        camera.fov += (targetFOV - camera.fov) * 0.08;
+        camera.updateProjectionMatrix();
+
         // Dynamic Weather Shifts with Biome Support
         const weather = getWeatherLighting(currentDist, activeLevel.biome);
         scene.background = new THREE.Color(weather.skyColor);
@@ -505,6 +574,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         camera.position.z += (targetCamZ - camera.position.z) * 0.08;
         camera.lookAt(physicsState.position.x, physicsState.position.y + 0.3, physicsState.position.z - 4.0);
 
+        // Visceral Banking Roll Follow
+        camera.rotation.z += physicsState.roll * 0.22;
+
         // Check Touchdown / Ground Landing
         if (physicsState.altitude <= 0.02 && (currentSpeed < 2.5 || physicsState.position.y <= 0)) {
           gameAudio.stopFlightAudio();
@@ -512,9 +584,13 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
         }
       } else if (currentFlightState === 'idle') {
-        // Idle camera slight breathing
+        // Idle camera slight breathing & reset FOV
+        camera.fov += (60 - camera.fov) * 0.08;
+        camera.updateProjectionMatrix();
         camera.position.set(0, 2.8 + Math.sin(currentTime * 0.001) * 0.08, 6.5);
         camera.lookAt(0, 1.4, 0);
+        leftTrailLine.material.opacity = 0;
+        (rightTrailLine.material as THREE.LineBasicMaterial).opacity = 0;
       }
 
       // Animate windmills, lanterns, stars
@@ -545,6 +621,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       gameAudio.stopFlightAudio();
+      leftTrailGeo.dispose();
+      rightTrailGeo.dispose();
+      trailMat.dispose();
       renderer.dispose();
       while (container.firstChild) {
         container.removeChild(container.firstChild);
