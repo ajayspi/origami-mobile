@@ -301,7 +301,7 @@ function buildStepBaseGeometry(vertices: number[], id: string, rawStepIdx: numbe
   // ---------------------------------------------------------------------------
   // 2. GENERAL ORIGAMI LINEAGES (High-Dimensional Multi-Flap Bases)
   // ---------------------------------------------------------------------------
-  const isBird = id.includes('crane') || id.includes('peacock') || id === 'japanese-01' || id === 'indian-01' || id === 'american-01' || id === 'chinese-04';
+  const isBird = id.includes('crane') || id.includes('peacock') || id === 'japanese-01' || id === 'indian-01' || id === 'american-01' || id === 'chinese-04' || id === 'raptor-01';
   const isHelmet = id.includes('kabuto') || id === 'japanese-02' || id.includes('crown') || id === 'indian-06' || id.includes('calavera') || id === 'festival-04';
   const isQuadruped = id.includes('elephant') || id === 'indian-02' || id.includes('tiger') || id === 'indian-03' || id.includes('bison') || id === 'american-02' || id.includes('donkey') || id.includes('rabbit') || id === 'chinese-05' || id === 'japanese-04';
   const isKinetic = id.includes('frog') || id === 'american-03' || id.includes('beetle') || id === 'american-04' || id.includes('bat') || id === 'festival-02';
@@ -1549,6 +1549,73 @@ export function synthesizeKitStepGeometry(
       }
     }
   }
+  else if (id === 'raptor-01') {
+    // PEREGRINE FALCON (HAYABUSA) — Apex Dive Raptor with Swept Delta Wings, 12 deg Dihedral Crease, Beak Crimp & Tail Notch
+    const beakTip: [number, number, number] = [0, -0.06 * f, -1.55 * f];
+    const beakCrown: [number, number, number] = [0, 0.12 * f, -1.35 * f];
+    const throat: [number, number, number] = [0, -0.12 * f, -1.25 * f];
+    const eyeLeft: [number, number, number] = [-0.14 * f, 0.14 * f, -1.15 * f];
+    const eyeRight: [number, number, number] = [0.14 * f, 0.14 * f, -1.15 * f];
+
+    const spineFront: [number, number, number] = [0, 0.16 * f, -0.6 * f];
+    const spineCenter: [number, number, number] = [0, 0.18 * f, 0.1 * f];
+    const spineRear: [number, number, number] = [0, 0.12 * f, 0.7 * f];
+    const breastKeel: [number, number, number] = [0, -0.22 * f, -0.4 * f];
+    const bellyRear: [number, number, number] = [0, -0.18 * f, 0.6 * f];
+
+    const shoulderLeft: [number, number, number] = [-0.45 * f, 0.12 * f, -0.5 * f];
+    const shoulderRight: [number, number, number] = [0.45 * f, 0.12 * f, -0.5 * f];
+    const midWingLeft: [number, number, number] = [-0.95 * f, 0.18 * f, 0.1 * f];
+    const midWingRight: [number, number, number] = [0.95 * f, 0.18 * f, 0.1 * f];
+    const wingTipLeft: [number, number, number] = [-1.65 * f, 0.35 * f, 0.65 * f]; // 12 deg dihedral rise
+    const wingTipRight: [number, number, number] = [1.65 * f, 0.35 * f, 0.65 * f];
+    const trailingLeft: [number, number, number] = [-0.85 * f, 0.14 * f, 0.75 * f];
+    const trailingRight: [number, number, number] = [0.85 * f, 0.14 * f, 0.75 * f];
+
+    const tailTipLeft: [number, number, number] = [-0.35 * f, 0.08 * f, 1.45 * f];
+    const tailTipRight: [number, number, number] = [0.35 * f, 0.08 * f, 1.45 * f];
+    const tailNotch: [number, number, number] = [0, 0.09 * f, 1.25 * f];
+
+    // Beak & Head Facets
+    addTri(vertices, beakTip, beakCrown, eyeLeft);
+    addTri(vertices, beakTip, eyeRight, beakCrown);
+    addTri(vertices, beakTip, eyeLeft, throat);
+    addTri(vertices, beakTip, throat, eyeRight);
+
+    // Crown to Spine & Throat to Breast
+    addTri(vertices, beakCrown, spineFront, eyeLeft);
+    addTri(vertices, beakCrown, eyeRight, spineFront);
+    addTri(vertices, throat, eyeLeft, breastKeel);
+    addTri(vertices, throat, breastKeel, eyeRight);
+
+    // Shoulders
+    addTri(vertices, eyeLeft, spineFront, shoulderLeft);
+    addTri(vertices, eyeRight, shoulderRight, spineFront);
+
+    // Swept Delta Wings (Upper Surface)
+    addQuad(vertices, spineFront, spineCenter, midWingLeft, shoulderLeft);
+    addQuad(vertices, spineFront, shoulderRight, midWingRight, spineCenter);
+    addTri(vertices, shoulderLeft, wingTipLeft, midWingLeft);
+    addTri(vertices, shoulderRight, midWingRight, wingTipRight);
+    addQuad(vertices, spineCenter, spineRear, trailingLeft, midWingLeft);
+    addQuad(vertices, spineCenter, midWingRight, trailingRight, spineRear);
+    addTri(vertices, midWingLeft, wingTipLeft, trailingLeft);
+    addTri(vertices, midWingRight, trailingRight, wingTipRight);
+
+    // Underbelly & Ventral Wing Surfaces
+    addTri(vertices, breastKeel, shoulderLeft, bellyRear);
+    addTri(vertices, breastKeel, bellyRear, shoulderRight);
+    addTri(vertices, shoulderLeft, trailingLeft, bellyRear);
+    addTri(vertices, shoulderRight, bellyRear, trailingRight);
+    addTri(vertices, shoulderLeft, wingTipLeft, trailingLeft);
+    addTri(vertices, shoulderRight, trailingRight, wingTipRight);
+
+    // Notched Raptor Tail
+    addTri(vertices, spineRear, tailTipLeft, tailNotch);
+    addTri(vertices, spineRear, tailNotch, tailTipRight);
+    addTri(vertices, bellyRear, tailNotch, tailTipLeft);
+    addTri(vertices, bellyRear, tailTipRight, tailNotch);
+  }
   else if (id === 'aerospace-02') {
     // FALCON DART — Supersonic Aerodynamic Glider (15 deg Dihedral Camber, Canard Ballast & Winglets)
     const nose: [number, number, number] = [0, 0.02 * f, -1.65 * f];
@@ -1624,6 +1691,7 @@ export function synthesizeKitStepGeometry(
     const s = Math.min(1.6, Math.max(0.7, targetRadius / geo.boundingSphere.radius));
     geo.scale(s, s, s);
   }
+  geo.userData = { modelType: id };
   return geo;
 }
 
