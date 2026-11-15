@@ -446,12 +446,24 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       }
     };
 
+    // DeviceOrientation (Gyroscope) Tilt Controls
+    const gyroOrientation = { gamma: 0, beta: 0, active: false };
+
+    const onDeviceOrientation = (e: DeviceOrientationEvent) => {
+      const isGyroActive = useGameStore.getState().gyroEnabled;
+      if (!isGyroActive || e.gamma === null || e.beta === null) return;
+      gyroOrientation.active = true;
+      gyroOrientation.gamma = e.gamma;
+      gyroOrientation.beta = e.beta;
+    };
+
     container.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('deviceorientation', onDeviceOrientation);
 
     // 60 FPS Render & Physics Loop
     let lastTime = performance.now();
@@ -477,6 +489,26 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           physicsState.roll += storeSteer * 2.8 * dt;
           physicsState.yaw -= storeSteer * 1.6 * dt;
           physicsState.velocity.x += Math.sin(physicsState.roll) * 8.0 * dt;
+        }
+
+        // Active Gyroscope Tilt Steering (Roll & Pitch)
+        const isGyroActive = useGameStore.getState().gyroEnabled;
+        if (isGyroActive && gyroOrientation.active) {
+          // 3-degree deadband to suppress mobile handheld tremor jitter
+          const cleanGamma = Math.abs(gyroOrientation.gamma) < 3.0 ? 0 : gyroOrientation.gamma;
+          const cleanBetaOffset = Math.abs(gyroOrientation.beta - 45.0) < 3.0 ? 0 : (gyroOrientation.beta - 45.0);
+
+          // gamma: left/right tilt [-30, 30] deg
+          const rollTilt = Math.max(-1, Math.min(1, cleanGamma / 25));
+          // beta: handheld neutral is ~45 deg, tilt forward -> pitch down, tilt back -> pitch up
+          const pitchTilt = Math.max(-1, Math.min(1, cleanBetaOffset / 22));
+
+          controls.rollInput = Math.max(-1, Math.min(1, controls.rollInput + rollTilt * kitStat.turnAgility));
+          controls.pitchInput = Math.max(-1, Math.min(1, controls.pitchInput - pitchTilt * 0.8));
+
+          physicsState.roll += rollTilt * 2.4 * dt;
+          physicsState.yaw -= rollTilt * 1.4 * dt;
+          physicsState.velocity.x += Math.sin(physicsState.roll) * 7.0 * dt;
         }
 
         // Active Rocket Thruster Booster Execution
@@ -694,6 +726,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       window.removeEventListener('pointercancel', onPointerUp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('deviceorientation', onDeviceOrientation);
       gameAudio.stopFlightAudio();
       leftTrailGeo.dispose();
       rightTrailGeo.dispose();

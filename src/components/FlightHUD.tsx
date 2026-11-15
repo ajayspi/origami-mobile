@@ -2,13 +2,110 @@ import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
 import { TRINITY_KITS } from '../types/game';
-import { Wrench, MapPin, Sparkles, Wind, Flame, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wrench, MapPin, Sparkles, Wind, Flame, ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
 
 interface FlightHUDProps {
   onOpenKitSelector: () => void;
   onOpenHangar: () => void;
   onOpenLevelSelect: () => void;
 }
+
+// Lightweight Isolated Telemetry Component (Prevents Re-rendering Static Controls at 60 FPS)
+const FlightTelemetry: React.FC<{ goalDistance: number }> = React.memo(({ goalDistance }) => {
+  const distance = useGameStore(s => s.distance);
+  const altitude = useGameStore(s => s.altitude);
+  const speed = useGameStore(s => s.speed);
+  const progressPercent = Math.min(100, Math.round((distance / goalDistance) * 100));
+
+  return (
+    <>
+      {/* Flight Progress Track Ribbon */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top) + 54px)',
+          left: 20,
+          right: 20,
+          height: 10,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          border: '2px solid #b45309',
+          borderRadius: 6,
+          overflow: 'hidden',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${progressPercent}%`,
+            background: 'linear-gradient(90deg, #f59e0b, #10b981)',
+            transition: 'width 0.2s linear',
+            boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)'
+          }}
+        />
+      </div>
+
+      {/* Left Altimeter Gauge */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 14,
+          top: 'calc(env(safe-area-inset-top) + 80px)',
+          background: 'rgba(15, 23, 42, 0.75)',
+          border: '2px solid #f59e0b',
+          borderRadius: 16,
+          padding: '8px 10px',
+          color: '#ffffff',
+          textAlign: 'center',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(8px)'
+        }}
+      >
+        <div style={{ fontSize: 9, fontWeight: 900, color: '#fef08a', textTransform: 'uppercase' }}>ALT</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: '#38bdf8' }}>{Math.round(altitude)}<span style={{ fontSize: 11 }}>m</span></div>
+      </div>
+
+      {/* Right Airspeed Gauge */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 14,
+          top: 'calc(env(safe-area-inset-top) + 80px)',
+          background: 'rgba(15, 23, 42, 0.75)',
+          border: '2px solid #f59e0b',
+          borderRadius: 16,
+          padding: '8px 10px',
+          color: '#ffffff',
+          textAlign: 'center',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(8px)'
+        }}
+      >
+        <div style={{ fontSize: 9, fontWeight: 900, color: '#fef08a', textTransform: 'uppercase' }}>SPEED</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: '#4ade80' }}>{Math.round(speed * 3.6)}<span style={{ fontSize: 10 }}>km/h</span></div>
+      </div>
+
+      {/* Center Distance & Goal Banner */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top) + 72px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          textAlign: 'center',
+          textShadow: '0 3px 8px rgba(0,0,0,0.8)'
+        }}
+      >
+        <div style={{ fontSize: 36, fontWeight: 900, color: '#fef08a', letterSpacing: 0.5 }}>
+          {distance}m
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', opacity: 0.9 }}>
+          TARGET: {goalDistance}m
+        </div>
+      </div>
+    </>
+  );
+});
 
 export const FlightHUD: React.FC<FlightHUDProps> = ({
   onOpenKitSelector,
@@ -18,9 +115,6 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const flightState = useGameStore(s => s.flightState);
   const activeLevelId = useGameStore(s => s.activeLevelId);
   const selectedKitId = useGameStore(s => s.selectedKitId);
-  const distance = useGameStore(s => s.distance);
-  const altitude = useGameStore(s => s.altitude);
-  const speed = useGameStore(s => s.speed);
   const thermalsCaught = useGameStore(s => s.thermalsCaught);
   const starsCollected = useGameStore(s => s.starsCollected);
   const totalStars = useGameStore(s => s.totalStars);
@@ -30,10 +124,30 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const steerInput = useGameStore(s => s.steerInput);
   const setSteerInput = useGameStore(s => s.setSteerInput);
   const activateBoost = useGameStore(s => s.activateBoost);
+  const gyroEnabled = useGameStore(s => s.gyroEnabled);
+  const setGyroEnabled = useGameStore(s => s.setGyroEnabled);
+
+  const handleToggleGyro = async () => {
+    if (!gyroEnabled) {
+      if (typeof (DeviceOrientationEvent as any)?.requestPermission === 'function') {
+        try {
+          const perm = await (DeviceOrientationEvent as any).requestPermission();
+          if (perm === 'granted') {
+            setGyroEnabled(true);
+          }
+        } catch {
+          // iOS user cancelled or denied
+        }
+      } else {
+        setGyroEnabled(true);
+      }
+    } else {
+      setGyroEnabled(false);
+    }
+  };
 
   const activeLevel = GAME_LEVELS.find(l => l.id === activeLevelId) || GAME_LEVELS[0];
   const activeTrinity = TRINITY_KITS[selectedKitId] || { icon: '✈️', name: 'Falcon Dart' };
-  const progressPercent = Math.min(100, Math.round((distance / activeLevel.goalDistance) * 100));
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20 }}>
@@ -120,95 +234,8 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         </button>
       </div>
 
-      {/* Flight Progress Track Ribbon */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 'calc(env(safe-area-inset-top) + 54px)',
-          left: 20,
-          right: 20,
-          height: 10,
-          backgroundColor: 'rgba(15, 23, 42, 0.7)',
-          border: '2px solid #b45309',
-          borderRadius: 6,
-          overflow: 'hidden',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
-        }}
-      >
-        <div
-          style={{
-            height: '100%',
-            width: `${progressPercent}%`,
-            background: 'linear-gradient(90deg, #f59e0b, #10b981)',
-            transition: 'width 0.2s linear',
-            boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)'
-          }}
-        />
-      </div>
-
-      {/* IN-FLIGHT ARCADIC GAUGES */}
-      {flightState === 'flying' && (
-        <>
-          {/* Left Altimeter Gauge */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 14,
-              top: 'calc(env(safe-area-inset-top) + 80px)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              border: '2px solid #f59e0b',
-              borderRadius: 16,
-              padding: '8px 10px',
-              color: '#ffffff',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              backdropFilter: 'blur(8px)'
-            }}
-          >
-            <div style={{ fontSize: 9, fontWeight: 900, color: '#fef08a', textTransform: 'uppercase' }}>ALT</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#38bdf8' }}>{Math.round(altitude)}<span style={{ fontSize: 11 }}>m</span></div>
-          </div>
-
-          {/* Right Airspeed Gauge */}
-          <div
-            style={{
-              position: 'absolute',
-              right: 14,
-              top: 'calc(env(safe-area-inset-top) + 80px)',
-              background: 'rgba(15, 23, 42, 0.75)',
-              border: '2px solid #f59e0b',
-              borderRadius: 16,
-              padding: '8px 10px',
-              color: '#ffffff',
-              textAlign: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              backdropFilter: 'blur(8px)'
-            }}
-          >
-            <div style={{ fontSize: 9, fontWeight: 900, color: '#fef08a', textTransform: 'uppercase' }}>SPEED</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#4ade80' }}>{Math.round(speed * 3.6)}<span style={{ fontSize: 10 }}>km/h</span></div>
-          </div>
-
-          {/* Center Distance & Goal Banner */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 'calc(env(safe-area-inset-top) + 72px)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              textAlign: 'center',
-              textShadow: '0 3px 8px rgba(0,0,0,0.8)'
-            }}
-          >
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#fef08a', letterSpacing: 0.5 }}>
-              {distance}m
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', opacity: 0.9 }}>
-              TARGET: {activeLevel.goalDistance}m
-            </div>
-          </div>
-        </>
-      )}
+      {/* Flight Progress Track Ribbon & Telemetry Gauges */}
+      {flightState === 'flying' && <FlightTelemetry goalDistance={activeLevel.goalDistance} />}
 
       {/* Thruster Booster Active Banner */}
       {flightState === 'flying' && isBoosting && (
@@ -264,6 +291,32 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         >
           <Sparkles size={16} />
           {activeStunt === 'roll' ? '🌪️ 360° BARREL ROLL! (INVULNERABLE)' : '🚀 LOOP-THE-LOOP! (+ALTITUDE)'}
+        </div>
+      )}
+
+      {/* Gyroscope Active Indicator Banner */}
+      {flightState === 'flying' && gyroEnabled && !isBoosting && !activeStunt && (
+        <div
+          style={{
+            position: 'absolute',
+            top: thermalsCaught > 0 ? 'calc(env(safe-area-inset-top) + 200px)' : 'calc(env(safe-area-inset-top) + 165px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #15803d, #166534)',
+            border: '2px solid #86efac',
+            color: '#ffffff',
+            padding: '4px 14px',
+            borderRadius: 16,
+            fontSize: 11,
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            boxShadow: '0 4px 12px rgba(22, 101, 52, 0.4)',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Smartphone size={13} color="#86efac" /> TILT PHONE TO STEER
         </div>
       )}
 
@@ -358,6 +411,37 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             >
               <ChevronRight size={26} />
               <span style={{ fontSize: 9, fontWeight: 900 }}>RIGHT</span>
+            </button>
+
+            {/* Mobile Gyroscope Tilt Toggle Button */}
+            <button
+              onClick={handleToggleGyro}
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 20,
+                border: gyroEnabled ? '3px solid #4ade80' : '3px solid #64748b',
+                background: gyroEnabled
+                  ? 'linear-gradient(135deg, #15803d, #166534)'
+                  : 'linear-gradient(135deg, #334155, #1e293b)',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: gyroEnabled
+                  ? '0 4px 0 #14532d, 0 6px 16px rgba(74,222,128,0.4)'
+                  : '0 4px 0 #0f172a, 0 4px 10px rgba(0,0,0,0.3)',
+                transform: gyroEnabled ? 'translateY(1px)' : 'none',
+                userSelect: 'none'
+              }}
+              title="Toggle mobile device tilt steering"
+            >
+              <Smartphone size={22} color={gyroEnabled ? '#4ade80' : '#94a3b8'} />
+              <span style={{ fontSize: 9, fontWeight: 900, color: gyroEnabled ? '#4ade80' : '#94a3b8' }}>
+                {gyroEnabled ? 'TILT ON' : 'TILT'}
+              </span>
             </button>
           </div>
 

@@ -61,12 +61,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   steerInput: 0,
   boostCharges: 3,
   isBoosting: false,
+  gyroEnabled: false,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
 
   selectKit: (selectedKitId: string) => set({ selectedKitId }),
 
   setSteerInput: (steerInput: number) => set({ steerInput }),
+
+  setGyroEnabled: (gyroEnabled: boolean) => set({ gyroEnabled }),
+
+  toggleGyro: () => set(state => ({ gyroEnabled: !state.gyroEnabled })),
 
   activateBoost: () => {
     const { boostCharges, isBoosting, flightState } = get();

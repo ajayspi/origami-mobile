@@ -91,6 +91,7 @@ export interface GameState {
   steerInput: number;
   boostCharges: number;
   isBoosting: boolean;
+  gyroEnabled: boolean;
 
   // Actions
   setFlightState: (state: FlightState) => void;
@@ -98,6 +99,8 @@ export interface GameState {
   selectLevel: (levelId: string) => void;
   setSteerInput: (val: number) => void;
   activateBoost: () => boolean;
+  setGyroEnabled: (enabled: boolean) => void;
+  toggleGyro: () => void;
   updateTelemetry: (distance: number, altitude: number, speed: number) => void;
   collectStar: () => void;
   triggerThermal: () => void;
