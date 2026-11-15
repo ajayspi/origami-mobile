@@ -289,6 +289,49 @@ class GameAudioSynthesizer {
     } catch {}
   }
 
+  public playRocketThruster(): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = this.ctx.currentTime;
+
+      // Deep Rocket Sub Rumble
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = 'sawtooth';
+      subOsc.frequency.setValueAtTime(75, now);
+      subOsc.frequency.linearRampToValueAtTime(135, now + 0.35);
+      subOsc.frequency.exponentialRampToValueAtTime(35, now + 0.85);
+
+      subGain.gain.setValueAtTime(0.38, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+      subOsc.connect(subGain);
+      subGain.connect(this.masterGain);
+      subOsc.start(now);
+      subOsc.stop(now + 0.9);
+
+      // Fiery Jet Turbine Burn Sweep
+      const jetOsc = this.ctx.createOscillator();
+      const jetGain = this.ctx.createGain();
+      jetOsc.type = 'triangle';
+      jetOsc.frequency.setValueAtTime(340, now);
+      jetOsc.frequency.linearRampToValueAtTime(820, now + 0.3);
+      jetOsc.frequency.exponentialRampToValueAtTime(160, now + 0.75);
+
+      jetGain.gain.setValueAtTime(0.42, now);
+      jetGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+
+      jetOsc.connect(jetGain);
+      jetGain.connect(this.masterGain);
+      jetOsc.start(now);
+      jetOsc.stop(now + 0.8);
+    } catch {}
+  }
+
   public stopFlightAudio(): void {
     if (!this.ctx || !this.windGain) return;
     try {

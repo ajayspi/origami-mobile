@@ -88,11 +88,16 @@ export interface GameState {
   upgrades: AircraftUpgrades;
   activePaperStock: PaperStock;
   activeStunt: StuntType;
+  steerInput: number;
+  boostCharges: number;
+  isBoosting: boolean;
 
   // Actions
   setFlightState: (state: FlightState) => void;
   selectKit: (kitId: string) => void;
   selectLevel: (levelId: string) => void;
+  setSteerInput: (val: number) => void;
+  activateBoost: () => boolean;
   updateTelemetry: (distance: number, altitude: number, speed: number) => void;
   collectStar: () => void;
   triggerThermal: () => void;

@@ -112,6 +112,35 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     }
 
     planeGroup.add(planeMesh);
+
+    // 3D Origami Rocket Thruster Flame (Attached to Plane Exhaust)
+    const thrusterFlameGroup = new THREE.Group();
+    const outerFlameGeo = new THREE.ConeGeometry(0.32, 1.3, 5);
+    outerFlameGeo.rotateX(Math.PI / 2); // points backward (+Z)
+    const outerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      transparent: true,
+      opacity: 0.88,
+      side: THREE.DoubleSide
+    });
+    const outerFlameMesh = new THREE.Mesh(outerFlameGeo, outerFlameMat);
+
+    const innerFlameGeo = new THREE.ConeGeometry(0.18, 0.85, 5);
+    innerFlameGeo.rotateX(Math.PI / 2);
+    const innerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xfef08a,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide
+    });
+    const innerFlameMesh = new THREE.Mesh(innerFlameGeo, innerFlameMat);
+
+    thrusterFlameGroup.add(outerFlameMesh, innerFlameMesh);
+    const rearZ = (selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? -0.85 : 0.85;
+    thrusterFlameGroup.position.set(0, 0.08, rearZ);
+    thrusterFlameGroup.scale.set(0, 0, 0);
+    thrusterFlameGroup.visible = false;
+    planeGroup.add(thrusterFlameGroup);
     planeGroup.position.set(0, 1.8, 0);
     scene.add(planeGroup);
 
@@ -389,17 +418,27 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       }
 
       if (state === 'flying') {
-        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') controls.rollInput = -1;
-        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') controls.rollInput = 1;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+          useGameStore.getState().setSteerInput(-1);
+          controls.rollInput = -1;
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+          useGameStore.getState().setSteerInput(1);
+          controls.rollInput = 1;
+        }
         if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') controls.pitchInput = 0.8;
         if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') controls.pitchInput = -0.8;
-        if (e.key === ' ' && !activeStunt) triggerStunt('roll');
-        if ((e.key === 'w' || e.key === 'ArrowUp') && e.shiftKey && !activeStunt) triggerStunt('loop');
+        if (e.key === ' ' || e.key === 'Shift') {
+          useGameStore.getState().activateBoost();
+        }
+        if (e.key === 'r' && !activeStunt) triggerStunt('roll');
+        if (e.key === 'l' && !activeStunt) triggerStunt('loop');
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'd' || e.key === 'A' || e.key === 'D') {
+        useGameStore.getState().setSteerInput(0);
         controls.rollInput = 0;
       }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'w' || e.key === 's' || e.key === 'W' || e.key === 'S') {
@@ -417,6 +456,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     // 60 FPS Render & Physics Loop
     let lastTime = performance.now();
     let animId: number;
+    let wasBoosting = false;
 
     const animate = (currentTime: number) => {
       animId = requestAnimationFrame(animate);
@@ -428,6 +468,39 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       if (currentFlightState === 'flying') {
         const liftMult = (1.0 + upgrades.lift * 0.10) * kitStat.liftMultiplier;
         const dragMult = Math.max(0.4, (1.0 - upgrades.drag * 0.08) * kitStat.dragMultiplier);
+
+        // Active Steering Left/Right Response
+        const storeSteer = useGameStore.getState().steerInput;
+        controls.rollInput = Math.max(-1, Math.min(1, controls.rollInput + storeSteer * kitStat.turnAgility));
+
+        if (storeSteer !== 0) {
+          physicsState.roll += storeSteer * 2.8 * dt;
+          physicsState.yaw -= storeSteer * 1.6 * dt;
+          physicsState.velocity.x += Math.sin(physicsState.roll) * 8.0 * dt;
+        }
+
+        // Active Rocket Thruster Booster Execution
+        const isBoosting = useGameStore.getState().isBoosting;
+        if (isBoosting) {
+          if (!wasBoosting) {
+            gameAudio.playRocketThruster();
+            wasBoosting = true;
+          }
+          const forward = physicsState.velocity.clone().normalize();
+          physicsState.velocity.addScaledVector(forward, 24.0 * dt);
+          physicsState.pitch = Math.max(-0.08, physicsState.pitch + 0.15 * dt); // slight climb
+
+          // Animate 3D Origami Rocket Flame
+          const flicker = 1.0 + Math.sin(currentTime * 0.05) * 0.35;
+          thrusterFlameGroup.scale.set(flicker, flicker, flicker * 1.4);
+          thrusterFlameGroup.visible = true;
+        } else {
+          wasBoosting = false;
+          thrusterFlameGroup.scale.multiplyScalar(0.8);
+          if (thrusterFlameGroup.scale.x < 0.05) {
+            thrusterFlameGroup.visible = false;
+          }
+        }
 
         // Step Aerodynamics
         physicsState = computeAerodynamicStep(physicsState, controls, dt, liftMult, dragMult);
@@ -548,9 +621,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         leftTrailLine.material.opacity += (targetTrailOpacity - leftTrailLine.material.opacity) * 0.15;
         (rightTrailLine.material as THREE.LineBasicMaterial).opacity = leftTrailLine.material.opacity;
 
-        // Dynamic Speed-Responsive Camera FOV (60° base -> up to 74° on steep dives and boosts)
-        const targetFOV = 60 + Math.min(14, Math.max(0, (currentSpeed - 10) * 1.15));
-        camera.fov += (targetFOV - camera.fov) * 0.08;
+        // Dynamic Speed-Responsive Camera FOV (60° base -> up to 78° on steep dives and boosts)
+        const boostFOV = isBoosting ? 12 : 0;
+        const targetFOV = 60 + Math.min(16, Math.max(0, (currentSpeed - 10) * 1.15)) + boostFOV;
+        camera.fov += (targetFOV - camera.fov) * 0.12;
         camera.updateProjectionMatrix();
 
         // Dynamic Weather Shifts with Biome Support
@@ -624,6 +698,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       leftTrailGeo.dispose();
       rightTrailGeo.dispose();
       trailMat.dispose();
+      outerFlameGeo.dispose();
+      innerFlameGeo.dispose();
+      outerFlameMat.dispose();
+      innerFlameMat.dispose();
       renderer.dispose();
       while (container.firstChild) {
         container.removeChild(container.firstChild);

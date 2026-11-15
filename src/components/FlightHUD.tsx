@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
 import { TRINITY_KITS } from '../types/game';
-import { Wrench, MapPin, Sparkles, Wind, Gauge, Compass } from 'lucide-react';
+import { Wrench, MapPin, Sparkles, Wind, Flame, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FlightHUDProps {
   onOpenKitSelector: () => void;
@@ -25,6 +25,11 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const starsCollected = useGameStore(s => s.starsCollected);
   const totalStars = useGameStore(s => s.totalStars);
   const activeStunt = useGameStore(s => s.activeStunt);
+  const boostCharges = useGameStore(s => s.boostCharges);
+  const isBoosting = useGameStore(s => s.isBoosting);
+  const steerInput = useGameStore(s => s.steerInput);
+  const setSteerInput = useGameStore(s => s.setSteerInput);
+  const activateBoost = useGameStore(s => s.activateBoost);
 
   const activeLevel = GAME_LEVELS.find(l => l.id === activeLevelId) || GAME_LEVELS[0];
   const activeTrinity = TRINITY_KITS[selectedKitId] || { icon: '✈️', name: 'Falcon Dart' };
@@ -205,8 +210,36 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         </>
       )}
 
+      {/* Thruster Booster Active Banner */}
+      {flightState === 'flying' && isBoosting && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top) + 128px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #ef4444, #f97316)',
+            border: '2px solid #fef08a',
+            color: '#ffffff',
+            padding: '8px 22px',
+            borderRadius: 24,
+            fontSize: 14,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 0 25px rgba(249, 115, 22, 0.75)',
+            letterSpacing: 0.5,
+            animation: 'pulse 0.4s infinite alternate'
+          }}
+        >
+          <Flame size={18} fill="#fef08a" />
+          🚀 ROCKET THRUSTERS IGNITED! (+SPEED)
+        </div>
+      )}
+
       {/* Aerobatic Stunt Banner */}
-      {flightState === 'flying' && activeStunt && (
+      {flightState === 'flying' && activeStunt && !isBoosting && (
         <div
           style={{
             position: 'absolute',
@@ -235,7 +268,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
       )}
 
       {/* Thermal Updraft Banner */}
-      {flightState === 'flying' && thermalsCaught > 0 && (
+      {flightState === 'flying' && thermalsCaught > 0 && !activeStunt && !isBoosting && (
         <div
           style={{
             position: 'absolute',
@@ -257,6 +290,140 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         >
           <Wind size={15} /> THERMAL CHAIN x{thermalsCaught} (+{starsCollected} ⭐)
         </div>
+      )}
+
+      {/* IN-FLIGHT TACTILE CONTROLS (STEER LEFT / RIGHT & THRUSTER BOOSTERS) */}
+      {flightState === 'flying' && (
+        <>
+          {/* Left/Right Steering Buttons (Bottom Left) */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 'calc(env(safe-area-inset-bottom) + 20px)',
+              left: 14,
+              display: 'flex',
+              gap: 8,
+              pointerEvents: 'auto'
+            }}
+          >
+            <button
+              onPointerDown={() => setSteerInput(-1)}
+              onPointerUp={() => setSteerInput(0)}
+              onPointerLeave={() => setSteerInput(0)}
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 20,
+                border: steerInput < 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
+                background: steerInput < 0
+                  ? 'linear-gradient(135deg, #0284c7, #075985)'
+                  : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: steerInput < 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 16px rgba(14,165,233,0.4)',
+                transform: steerInput < 0 ? 'translateY(3px)' : 'none',
+                userSelect: 'none'
+              }}
+            >
+              <ChevronLeft size={26} />
+              <span style={{ fontSize: 9, fontWeight: 900 }}>LEFT</span>
+            </button>
+
+            <button
+              onPointerDown={() => setSteerInput(1)}
+              onPointerUp={() => setSteerInput(0)}
+              onPointerLeave={() => setSteerInput(0)}
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 20,
+                border: steerInput > 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
+                background: steerInput > 0
+                  ? 'linear-gradient(135deg, #0284c7, #075985)'
+                  : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: steerInput > 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 16px rgba(14,165,233,0.4)',
+                transform: steerInput > 0 ? 'translateY(3px)' : 'none',
+                userSelect: 'none'
+              }}
+            >
+              <ChevronRight size={26} />
+              <span style={{ fontSize: 9, fontWeight: 900 }}>RIGHT</span>
+            </button>
+          </div>
+
+          {/* Thruster Booster Button (Bottom Right) */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 'calc(env(safe-area-inset-bottom) + 20px)',
+              right: 14,
+              pointerEvents: 'auto'
+            }}
+          >
+            <button
+              onClick={() => activateBoost()}
+              disabled={boostCharges <= 0 || isBoosting}
+              style={{
+                minWidth: 100,
+                height: 58,
+                padding: '0 16px',
+                borderRadius: 20,
+                border: isBoosting ? '3px solid #fef08a' : boostCharges > 0 ? '3px solid #fbbf24' : '3px solid #94a3b8',
+                background: isBoosting
+                  ? 'linear-gradient(135deg, #dc2626, #ea580c)'
+                  : boostCharges > 0
+                  ? 'linear-gradient(135deg, #f97316, #ea580c)'
+                  : 'linear-gradient(135deg, #64748b, #475569)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: boostCharges > 0 && !isBoosting ? 'pointer' : 'not-allowed',
+                boxShadow: boostCharges > 0
+                  ? '0 4px 0 #9a3412, 0 8px 20px rgba(249,115,22,0.5)'
+                  : 'none',
+                transform: isBoosting ? 'translateY(3px)' : 'none',
+                opacity: boostCharges > 0 || isBoosting ? 1 : 0.65,
+                userSelect: 'none'
+              }}
+            >
+              <Flame size={24} fill="#fef08a" />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>BOOST</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#fef08a' }}>
+                  {isBoosting ? 'FIRING!' : `${boostCharges} CHARGES`}
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Bottom Center Control Hints */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 'calc(env(safe-area-inset-bottom) + 26px)',
+              left: 140,
+              right: 140,
+              textAlign: 'center',
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: 10,
+              fontWeight: 800,
+              textShadow: '0 2px 6px rgba(0,0,0,0.8)'
+            }}
+          >
+            A/D or ◀ ▶ Steer • Space for Boost
+          </div>
+        </>
       )}
 
       {/* Idle State Launch Callout & Quick Dock */}

@@ -58,10 +58,30 @@ export const useGameStore = create<GameState>((set, get) => ({
   upgrades: getStoredUpgrades(),
   activePaperStock: 'washi',
   activeStunt: null,
+  steerInput: 0,
+  boostCharges: 3,
+  isBoosting: false,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
 
   selectKit: (selectedKitId: string) => set({ selectedKitId }),
+
+  setSteerInput: (steerInput: number) => set({ steerInput }),
+
+  activateBoost: () => {
+    const { boostCharges, isBoosting, flightState } = get();
+    if (flightState !== 'flying' || boostCharges <= 0 || isBoosting) {
+      return false;
+    }
+    set({
+      boostCharges: boostCharges - 1,
+      isBoosting: true
+    });
+    setTimeout(() => {
+      set({ isBoosting: false });
+    }, 1200);
+    return true;
+  },
 
   selectLevel: (activeLevelId: string) => {
     const { unlockedLevels } = get();
@@ -167,7 +187,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       altitude: 0,
       speed: 0,
       thermalsCaught: 0,
-      starsCollected: 0
+      starsCollected: 0,
+      steerInput: 0,
+      boostCharges: 3,
+      isBoosting: false
     });
   }
 }));
