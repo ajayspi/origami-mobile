@@ -218,7 +218,7 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
             </button>
 
             <button
-              onClick={onOpenHangar}
+              onClick={() => useGameStore.getState().goToCharacterSelect()}
               style={{
                 flex: 1,
                 padding: '13px',
@@ -226,7 +226,7 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
                 border: '2px solid #b45309',
                 background: '#ffffff',
                 color: '#78350f',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
@@ -238,9 +238,30 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
                 letterSpacing: 0.5
               }}
             >
-              <Wrench size={16} /> Workshop
+              🦅 Change Creature
             </button>
           </div>
+
+          <button
+            onClick={onOpenHangar}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: 14,
+              border: '1px solid rgba(180, 83, 9, 0.4)',
+              background: 'rgba(255, 255, 255, 0.7)',
+              color: '#92400e',
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <Wrench size={14} /> Workshop & Upgrades
+          </button>
         </div>
       </div>
     </div>

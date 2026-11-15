@@ -184,10 +184,11 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
             boxShadow: '0 3px 0 #b45309, 0 6px 12px rgba(0,0,0,0.25)',
             cursor: 'pointer'
           }}
+          title="Change Creature"
         >
           <span style={{ fontSize: 18 }}>{activeTrinity.icon}</span>
-          <span style={{ maxWidth: 105, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activeTrinity.name.split(' ')[0]}
+          <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {activeTrinity.name}
           </span>
         </button>
 
@@ -510,8 +511,8 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
         </>
       )}
 
-      {/* Idle State Launch Callout & Quick Dock */}
-      {flightState === 'idle' && (
+      {/* Idle / Cliff-Aim State Launch Callout & Quick Dock */}
+      {(flightState === 'idle' || flightState === 'cliff-aim') && (
         <div
           style={{
             position: 'absolute',
@@ -579,7 +580,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
                 cursor: 'pointer'
               }}
             >
-              54 Kits...
+              🦅 Change...
             </button>
           </div>
 
@@ -599,7 +600,7 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
               textTransform: 'uppercase'
             }}
           >
-            🎯 Drag Backward to Aim & Release to Soar!
+            🏔️ 30m Cliff Edge: Drag Backward to Dive & Soar!
           </div>
         </div>
       )}
