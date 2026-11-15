@@ -238,13 +238,12 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       positions.needsUpdate = true;
     };
 
-    // Touch Event Handlers for Mobile Slingshot & Steering
-    const onTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
+    // Unified Pointer Event Handlers (Mouse + Touch + Stylus)
+    const onPointerDown = (e: PointerEvent) => {
       const now = performance.now();
       const state = useGameStore.getState().flightState;
 
-      // Double-Tap Detection during flight -> 360° Barrel Roll
+      // Double-Tap / Double-Click Detection during flight -> 360° Barrel Roll
       if (state === 'flying') {
         if (now - lastTapTime < 280 && !activeStunt) {
           triggerStunt('roll');
@@ -253,21 +252,25 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
       lastTapTime = now;
       touchStartTime = now;
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchStart = { x: touch.clientX, y: touch.clientY, active: true };
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      touchStart = { x: e.clientX, y: e.clientY, active: true };
       gameAudio.init();
 
       if (state === 'idle') {
         useGameStore.getState().setFlightState('aiming');
+        try {
+          container.setPointerCapture(e.pointerId);
+        } catch {
+          // pointer capture fallback
+        }
       }
     };
 
-    const onTouchMove = (e: TouchEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       if (!touchStart.active) return;
-      const touch = e.touches[0];
-      const dx = touch.clientX - touchStart.x;
-      const dy = touch.clientY - touchStart.y;
+      const dx = e.clientX - touchStart.x;
+      const dy = e.clientY - touchStart.y;
 
       const state = useGameStore.getState().flightState;
 
@@ -276,7 +279,6 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         const dist = Math.min(120, Math.sqrt(dx * dx + dy * dy));
         pullBack = { dx, dy, distance: dist };
 
-        const pullRatio = dist / 120;
         planeGroup.position.set(-dx * 0.012, 1.8 - dy * 0.005, dy * 0.022);
         planeGroup.rotation.x = 0.15 + (dy / 120) * 0.35;
         planeGroup.rotation.y = -(dx / 120) * 0.45;
@@ -288,9 +290,16 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       }
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
+    const onPointerUp = (e: PointerEvent) => {
       if (!touchStart.active) return;
       touchStart.active = false;
+      try {
+        if (container.hasPointerCapture(e.pointerId)) {
+          container.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // pointer capture fallback
+      }
 
       const state = useGameStore.getState().flightState;
 
@@ -322,14 +331,11 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         }
       } else if (state === 'flying') {
         // Swipe Up Detection during flight -> Loop-the-Loop!
-        const touch = e.changedTouches ? e.changedTouches[0] : null;
-        if (touch) {
-          const dtTouch = performance.now() - touchStartTime;
-          const dyTouch = touch.clientY - touchStartY;
-          const dxTouch = touch.clientX - touchStartX;
-          if (dtTouch < 280 && dyTouch < -40 && Math.abs(dxTouch) < 60 && !activeStunt) {
-            triggerStunt('loop');
-          }
+        const dtTouch = performance.now() - touchStartTime;
+        const dyTouch = e.clientY - touchStartY;
+        const dxTouch = e.clientX - touchStartX;
+        if (dtTouch < 280 && dyTouch < -40 && Math.abs(dxTouch) < 60 && !activeStunt) {
+          triggerStunt('loop');
         }
 
         controls.pitchInput = 0;
@@ -337,9 +343,46 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       }
     };
 
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchmove', onTouchMove, { passive: true });
-    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    // Keyboard support for desktop players (Arrow Keys / WASD, Space for Roll)
+    const onKeyDown = (e: KeyboardEvent) => {
+      const state = useGameStore.getState().flightState;
+      if (state === 'idle' && (e.key === ' ' || e.key === 'Enter')) {
+        // Quick keyboard launch
+        useGameStore.getState().setFlightState('aiming');
+        pullBack = { dx: 0, dy: 90, distance: 90 };
+        setTimeout(() => {
+          if (useGameStore.getState().flightState === 'aiming') {
+            onPointerUp({ clientX: 0, clientY: 0, pointerId: 0 } as any);
+          }
+        }, 150);
+        return;
+      }
+
+      if (state === 'flying') {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') controls.rollInput = -1;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') controls.rollInput = 1;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') controls.pitchInput = 0.8;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') controls.pitchInput = -0.8;
+        if (e.key === ' ' && !activeStunt) triggerStunt('roll');
+        if ((e.key === 'w' || e.key === 'ArrowUp') && e.shiftKey && !activeStunt) triggerStunt('loop');
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'd' || e.key === 'A' || e.key === 'D') {
+        controls.rollInput = 0;
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'w' || e.key === 's' || e.key === 'W' || e.key === 'S') {
+        controls.pitchInput = 0;
+      }
+    };
+
+    container.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
 
     // 60 FPS Render & Physics Loop
     let lastTime = performance.now();
@@ -495,9 +538,12 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', onResize);
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchmove', onTouchMove);
-      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
       gameAudio.stopFlightAudio();
       renderer.dispose();
       while (container.firstChild) {
