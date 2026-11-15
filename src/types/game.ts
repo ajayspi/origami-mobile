@@ -1,4 +1,4 @@
-export type FlightState = 'idle' | 'aiming' | 'flying' | 'landed' | 'hangar';
+export type FlightState = 'splash' | 'select' | 'cliff-aim' | 'flying' | 'landed' | 'idle' | 'aiming' | 'hangar';
 export type TimeOfDay = 'morning' | 'sunset' | 'night';
 export type PaperStock = 'washi' | 'gold_foil' | 'sakura' | 'indigo';
 export type BiomeType = 'canyon' | 'sakura_valley' | 'alpine_glacier' | 'bamboo_forest';
@@ -7,7 +7,7 @@ export type StuntType = 'roll' | 'loop' | null;
 export interface KitFlightStats {
   kitId: string;
   name: string;
-  archetype: 'jet' | 'bird' | 'dragon';
+  archetype: 'jet' | 'bird' | 'dragon' | 'falcon';
   icon: string;
   speedMultiplier: number;
   liftMultiplier: number;
@@ -17,17 +17,6 @@ export interface KitFlightStats {
 }
 
 export const TRINITY_KITS: Record<string, KitFlightStats> = {
-  'aerospace-02': {
-    kitId: 'aerospace-02',
-    name: 'Falcon Dart',
-    archetype: 'jet',
-    icon: '✈️',
-    speedMultiplier: 1.15,
-    liftMultiplier: 0.95,
-    dragMultiplier: 0.85,
-    turnAgility: 1.25,
-    description: 'Supersonic agility, razor-sharp rolls, and low parasite drag.'
-  },
   'japanese-01': {
     kitId: 'japanese-01',
     name: 'Sacred Peace Crane',
@@ -49,6 +38,17 @@ export const TRINITY_KITS: Record<string, KitFlightStats> = {
     dragMultiplier: 1.05,
     turnAgility: 1.10,
     description: 'Heavy dive momentum, serpentine tail undulation, and fiery wind defiance.'
+  },
+  'raptor-01': {
+    kitId: 'raptor-01',
+    name: 'Peregrine Falcon',
+    archetype: 'falcon',
+    icon: '🦅',
+    speedMultiplier: 1.25,
+    liftMultiplier: 0.85,
+    dragMultiplier: 0.65,
+    turnAgility: 1.35,
+    description: 'Apex dive raptor with swept delta wings and razor-sharp banking agility.'
   }
 };
 
@@ -95,6 +95,9 @@ export interface GameState {
 
   // Actions
   setFlightState: (state: FlightState) => void;
+  goToCharacterSelect: () => void;
+  goToCliff: () => void;
+  instantCliffRespawn: () => void;
   selectKit: (kitId: string) => void;
   selectLevel: (levelId: string) => void;
   setSteerInput: (val: number) => void;

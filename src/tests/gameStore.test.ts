@@ -1,25 +1,53 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
+import { TRINITY_KITS } from '../types/game';
 
-describe('useGameStore', () => {
+describe('GameStore Arcade Flow & 3-Creature Trinity', () => {
   beforeEach(() => {
     useGameStore.getState().resetRun();
   });
 
-  it('initializes with Level 1 active, aerospace-02 kit, and idle flightState', () => {
+  it('starts in splash state by default', () => {
+    expect(useGameStore.getState().flightState).toBe('splash');
+  });
+
+  it('transitions from splash -> select -> cliff-aim', () => {
+    useGameStore.getState().goToCharacterSelect();
+    expect(useGameStore.getState().flightState).toBe('select');
+
+    useGameStore.getState().goToCliff();
+    expect(useGameStore.getState().flightState).toBe('cliff-aim');
+  });
+
+  it('contains the curated 3-creature flying trinity', () => {
+    const kitIds = Object.keys(TRINITY_KITS);
+    expect(kitIds).toEqual(['japanese-01', 'chinese-03', 'raptor-01']);
+    expect(TRINITY_KITS['raptor-01'].name).toBe('Peregrine Falcon');
+    expect(TRINITY_KITS['raptor-01'].archetype).toBe('falcon');
+    expect(TRINITY_KITS['raptor-01'].icon).toBe('🦅');
+  });
+
+  it('resets distance, speed and boost charges in instantCliffRespawn', () => {
+    useGameStore.setState({ distance: 150, speed: 22, boostCharges: 0, flightState: 'landed' });
+    useGameStore.getState().instantCliffRespawn();
     const state = useGameStore.getState();
-    expect(state.flightState).toBe('idle');
-    expect(state.selectedKitId).toBe('aerospace-02');
-    expect(state.activeLevelId).toBe('level-1');
+    expect(state.flightState).toBe('cliff-aim');
     expect(state.distance).toBe(0);
-    expect(state.starsCollected).toBe(0);
+    expect(state.speed).toBe(0);
+    expect(state.boostCharges).toBe(3);
+  });
+});
+
+describe('useGameStore legacy actions', () => {
+  beforeEach(() => {
+    useGameStore.getState().resetRun();
   });
 
   it('transitions flight state through launch and touchdown unlocking next level', () => {
     const store = useGameStore.getState();
-    store.setFlightState('aiming');
-    expect(useGameStore.getState().flightState).toBe('aiming');
+    store.setFlightState('cliff-aim');
+    expect(useGameStore.getState().flightState).toBe('cliff-aim');
     store.setFlightState('flying');
     expect(useGameStore.getState().flightState).toBe('flying');
     store.updateTelemetry(650, 12, 18.5);

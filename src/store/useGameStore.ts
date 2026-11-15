@@ -44,8 +44,8 @@ function getStoredHighScores(): Record<string, number> {
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-  flightState: 'idle',
-  selectedKitId: 'aerospace-02',
+  flightState: 'splash',
+  selectedKitId: 'japanese-01',
   activeLevelId: 'level-1',
   distance: 0,
   altitude: 0,
@@ -64,6 +64,28 @@ export const useGameStore = create<GameState>((set, get) => ({
   gyroEnabled: false,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
+
+  goToCharacterSelect: () => set({ flightState: 'select' }),
+
+  goToCliff: () => set({
+    flightState: 'cliff-aim',
+    distance: 0,
+    speed: 0,
+    altitude: 30,
+    boostCharges: 3,
+    isBoosting: false,
+    steerInput: 0
+  }),
+
+  instantCliffRespawn: () => set({
+    flightState: 'cliff-aim',
+    distance: 0,
+    speed: 0,
+    altitude: 30,
+    boostCharges: 3,
+    isBoosting: false,
+    steerInput: 0
+  }),
 
   selectKit: (selectedKitId: string) => set({ selectedKitId }),
 
@@ -187,7 +209,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   resetRun: () => {
     set({
-      flightState: 'idle',
+      flightState: 'splash',
       distance: 0,
       altitude: 0,
       speed: 0,
