@@ -9,6 +9,16 @@ import { generateCanyonTrack, updateDynamicObstacles, getWeatherLighting, Canyon
 import { gameAudio } from '../utils/gameAudio';
 import confetti from 'canvas-confetti';
 
+export function computeElevatedAimCamera(basePitch: number, tension: number): number {
+  return basePitch + ((8.5 * Math.PI) / 180) * Math.max(0, Math.min(1, tension));
+}
+
+export function computeSlingshotTension(dragPixels: number, maxPullback = 120): number {
+  const deadband = 20;
+  if (dragPixels < deadband) return 0;
+  return Math.min(1.0, (dragPixels - deadband) / (maxPullback - deadband));
+}
+
 interface FlightStageProps {
   onTelemetryUpdate?: (dist: number, alt: number, spd: number) => void;
 }
@@ -38,8 +48,9 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     scene.background = new THREE.Color(0x7dd3fc);
     scene.fog = new THREE.Fog(0xe0f2fe, 30, 175);
 
-    const camera = new THREE.PerspectiveCamera(54, w / h, 0.1, 450);
-    camera.position.set(0, 3.2, 7.5);
+    const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 450);
+    camera.position.set(0, 31.8, 4.5);
+    camera.lookAt(0, 30.5, -20.0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setSize(w, h, false);
@@ -141,11 +152,12 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     thrusterFlameGroup.scale.set(0, 0, 0);
     thrusterFlameGroup.visible = false;
     planeGroup.add(thrusterFlameGroup);
-    planeGroup.position.set(0, 1.8, 0);
+    planeGroup.position.set(0, 30.2, 0);
     scene.add(planeGroup);
 
     // Artisan Papercraft Runway Launchpad
     const runwayGroup = new THREE.Group();
+    runwayGroup.position.set(0, 30.0, 0);
     const rampMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.85, flatShading: true });
     const rampRailingMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.7, flatShading: true });
 
@@ -195,7 +207,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     // Slingshot Elastic Line (Vibrant Glowing Cyan Cord)
     const cordGeo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-1.4, 1.8, -0.6),
-      new THREE.Vector3(0, 1.8, 0),
+      new THREE.Vector3(0, 0.2, 0),
       new THREE.Vector3(1.4, 1.8, -0.6)
     ]);
     const cordMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 4 });
@@ -212,10 +224,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     for (let p = 0; p < TRAIL_LENGTH; p++) {
       leftTrailPositions[p * 3] = -0.9;
-      leftTrailPositions[p * 3 + 1] = 1.8;
+      leftTrailPositions[p * 3 + 1] = 30.2;
       leftTrailPositions[p * 3 + 2] = 0;
       rightTrailPositions[p * 3] = 0.9;
-      rightTrailPositions[p * 3 + 1] = 1.8;
+      rightTrailPositions[p * 3 + 1] = 30.2;
       rightTrailPositions[p * 3 + 2] = 0;
     }
 
@@ -237,14 +249,14 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
     // Flight State Tracking
     let physicsState: FlightPhysicsState = {
-      position: new THREE.Vector3(0, 1.8, 0),
+      position: new THREE.Vector3(0, 30.2, 0),
       velocity: new THREE.Vector3(0, 0, 0),
       rotation: new THREE.Euler(0, 0, 0),
       pitch: 0,
       roll: 0,
       yaw: 0,
       isStalled: false,
-      altitude: 1.8
+      altitude: 30.2
     };
 
     let controls = { pitchInput: 0, rollInput: 0 };
@@ -293,7 +305,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     const updateCordPoints = (planePos: THREE.Vector3) => {
       if (!slingshotCordRef.current) return;
       const positions = slingshotCordRef.current.geometry.attributes.position as THREE.BufferAttribute;
-      positions.setXYZ(1, planePos.x, planePos.y, planePos.z);
+      positions.setXYZ(1, planePos.x, planePos.y - 30.0, planePos.z);
       positions.needsUpdate = true;
     };
 
@@ -316,8 +328,10 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
       touchStart = { x: e.clientX, y: e.clientY, active: true };
       gameAudio.init();
 
-      if (state === 'idle') {
-        useGameStore.getState().setFlightState('aiming');
+      if (state === 'cliff-aim' || state === 'aiming' || state === 'idle') {
+        if (state === 'idle') {
+          useGameStore.getState().setFlightState('aiming');
+        }
         try {
           container.setPointerCapture(e.pointerId);
         } catch {
@@ -333,15 +347,32 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
       const state = useGameStore.getState().flightState;
 
-      if (state === 'aiming') {
-        // Slingshot pull-back (drag down/backward)
-        const dist = Math.min(120, Math.sqrt(dx * dx + dy * dy));
-        pullBack = { dx, dy, distance: dist };
+      if (state === 'cliff-aim' || state === 'aiming') {
+        const dragDist = Math.sqrt(dx * dx + dy * dy);
+        const tension = computeSlingshotTension(dragDist, 120);
+        pullBack = { dx, dy, distance: dragDist };
 
-        planeGroup.position.set(-dx * 0.012, 1.8 - dy * 0.005, dy * 0.022);
-        planeGroup.rotation.x = 0.15 + (dy / 120) * 0.35;
-        planeGroup.rotation.y = -(dx / 120) * 0.45;
-        updateCordPoints(planeGroup.position);
+        if (tension > 0) {
+          const effectiveDy = Math.max(0, dy - 20);
+          planeGroup.position.set(-dx * 0.012, 30.2 - effectiveDy * 0.005, effectiveDy * 0.022);
+          planeGroup.rotation.x = 0.15 + (effectiveDy / 100) * 0.35;
+          planeGroup.rotation.y = ((selectedKitId === 'japanese-01' || selectedKitId === 'chinese-03') ? Math.PI : 0) - (dx / 120) * 0.45;
+          updateCordPoints(planeGroup.position);
+
+          // Elevated Horizon Camera Framing (+8.5 deg upward pitch and FOV 60 -> 68)
+          const aimPitch = computeElevatedAimCamera(0.05, tension);
+          camera.position.set(-dx * 0.003, 31.8 + tension * 0.5, 4.5 + tension * 0.8);
+          camera.rotation.x = aimPitch;
+          camera.fov = 60 + 8.0 * tension;
+          camera.updateProjectionMatrix();
+        } else {
+          planeGroup.position.set(0, 30.2, 0);
+          updateCordPoints(planeGroup.position);
+          camera.position.set(0, 31.8, 4.5);
+          camera.fov = 60;
+          camera.lookAt(0, 30.5, -20.0);
+          camera.updateProjectionMatrix();
+        }
       } else if (state === 'flying') {
         // In-flight banking & pitch steering
         controls.rollInput = Math.max(-1, Math.min(1, (dx / 80) * kitStat.turnAgility));
@@ -362,31 +393,41 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
 
       const state = useGameStore.getState().flightState;
 
-      if (state === 'aiming') {
-        // Launch Aircraft!
-        const pullRatio = Math.max(0.15, pullBack.distance / 120);
-        const impulseMult = 1.0 + upgrades.impulse * 0.12;
-        const launchSpeed = pullRatio * 18.5 * impulseMult * kitStat.speedMultiplier;
+      if (state === 'cliff-aim' || state === 'aiming') {
+        const tension = computeSlingshotTension(pullBack.distance, 120);
+        if (tension > 0.05) {
+          const pullRatio = Math.max(0.2, tension);
+          const impulseMult = 1.0 + upgrades.impulse * 0.12;
+          const launchSpeed = pullRatio * 20.0 * impulseMult * kitStat.speedMultiplier;
 
-        const launchPitch = 0.18 + (pullBack.dy / 120) * 0.25;
-        const launchYaw = -(pullBack.dx / 120) * 0.35;
+          const launchPitch = 0.15 + (Math.max(0, pullBack.dy - 20) / 100) * 0.25;
+          const launchYaw = -(pullBack.dx / 120) * 0.35;
 
-        physicsState.position.copy(planeGroup.position);
-        physicsState.velocity.set(
-          -Math.sin(launchYaw) * launchSpeed * 0.5,
-          Math.sin(launchPitch) * launchSpeed * 0.65,
-          -Math.cos(launchPitch) * launchSpeed
-        );
-        physicsState.pitch = launchPitch;
-        physicsState.yaw = launchYaw;
-        physicsState.roll = 0;
+          physicsState.position.copy(planeGroup.position);
+          physicsState.velocity.set(
+            -Math.sin(launchYaw) * launchSpeed * 0.5,
+            Math.sin(launchPitch) * launchSpeed * 0.65,
+            -Math.cos(launchPitch) * launchSpeed
+          );
+          physicsState.pitch = launchPitch;
+          physicsState.yaw = launchYaw;
+          physicsState.roll = 0;
+          physicsState.altitude = physicsState.position.y;
 
-        useGameStore.getState().setFlightState('flying');
-        gameAudio.playLaunchSnap();
+          useGameStore.getState().setFlightState('flying');
+          gameAudio.playLaunchSnap();
 
-        // Hide slingshot cord after release
-        if (slingshotCordRef.current) {
-          slingshotCordRef.current.visible = false;
+          if (slingshotCordRef.current) {
+            slingshotCordRef.current.visible = false;
+          }
+        } else {
+          // Cancel/Deadband snap back to cliff rest
+          planeGroup.position.set(0, 30.2, 0);
+          updateCordPoints(planeGroup.position);
+          camera.position.set(0, 31.8, 4.5);
+          camera.fov = 60;
+          camera.lookAt(0, 30.5, -20.0);
+          camera.updateProjectionMatrix();
         }
       } else if (state === 'flying') {
         // Swipe Up Detection during flight -> Loop-the-Loop!
@@ -405,7 +446,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
     // Keyboard support for desktop players (Arrow Keys / WASD, Space for Roll)
     const onKeyDown = (e: KeyboardEvent) => {
       const state = useGameStore.getState().flightState;
-      if (state === 'idle' && (e.key === ' ' || e.key === 'Enter')) {
+      if ((state === 'cliff-aim' || state === 'idle') && (e.key === ' ' || e.key === 'Enter')) {
         // Quick keyboard launch
         useGameStore.getState().setFlightState('aiming');
         pullBack = { dx: 0, dy: 90, distance: 90 };
@@ -689,12 +730,22 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           useGameStore.getState().touchdown();
           confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
         }
-      } else if (currentFlightState === 'idle') {
-        // Idle camera slight breathing & reset FOV
-        camera.fov += (60 - camera.fov) * 0.08;
-        camera.updateProjectionMatrix();
-        camera.position.set(0, 2.8 + Math.sin(currentTime * 0.001) * 0.08, 6.5);
-        camera.lookAt(0, 1.4, 0);
+      } else if (currentFlightState === 'cliff-aim' || currentFlightState === 'idle') {
+        // Elevated cliff ledge resting camera & cord restoration
+        if (!touchStart.active) {
+          camera.fov += (60 - camera.fov) * 0.08;
+          camera.updateProjectionMatrix();
+          camera.position.set(0, 31.8 + Math.sin(currentTime * 0.001) * 0.05, 4.5);
+          camera.lookAt(0, 30.5, -20.0);
+          planeGroup.position.set(0, 30.2, 0);
+          physicsState.position.set(0, 30.2, 0);
+          physicsState.velocity.set(0, 0, 0);
+          physicsState.altitude = 30.2;
+          updateCordPoints(planeGroup.position);
+          if (slingshotCordRef.current) {
+            slingshotCordRef.current.visible = true;
+          }
+        }
         leftTrailLine.material.opacity = 0;
         (rightTrailLine.material as THREE.LineBasicMaterial).opacity = 0;
       }
