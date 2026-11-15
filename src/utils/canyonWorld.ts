@@ -34,6 +34,8 @@ export interface CanyonTrackData {
   level: GameLevel;
   ambientParticles?: THREE.Group;
   cloudsGroup?: THREE.Group;
+  cliffElevation: number;
+  launchpadMesh: THREE.Mesh;
 }
 
 export function getWeatherLighting(distance: number, biome?: BiomeType): WeatherLightingConfig {
@@ -278,9 +280,52 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   });
 
   // ---------------------------------------------------------------------------
-  // 2. PROCEDURAL STEPPED TERRACED CANYON CORRIDOR
+  // 2. PROCEDURAL 30-METER CLIFF PRECIPICE & CANYON CORRIDOR
   // ---------------------------------------------------------------------------
+  const cliffElevation = 30.0;
   const halfValleyWidth = 14;
+
+  // 2.0 Elevated Launchpad on Cliff Edge
+  const launchpadGeo = new THREE.BoxGeometry(10, 1.5, 14);
+  const launchpadMat = new THREE.MeshStandardMaterial({
+    color: 0xf5efe6,
+    roughness: 0.85,
+    flatShading: true
+  });
+  const launchpadMesh = new THREE.Mesh(launchpadGeo, launchpadMat);
+  launchpadMesh.position.set(0, cliffElevation, 5);
+  launchpadMesh.receiveShadow = true;
+  trackGroup.add(launchpadMesh);
+
+  // Terraced cliff wall descending from y=30 to y=0 behind the launch edge
+  const cliffWallGeo = new THREE.BoxGeometry(24, 30, 8);
+  const cliffWallMat = new THREE.MeshStandardMaterial({
+    color: wallLowerHex,
+    roughness: 0.95,
+    flatShading: true
+  });
+  const cliffWall = new THREE.Mesh(cliffWallGeo, cliffWallMat);
+  cliffWall.position.set(0, 15.0, 9);
+  cliffWall.receiveShadow = true;
+  trackGroup.add(cliffWall);
+
+  // Updraft buffer directly in front of the cliff ledge (catching steep downward glides)
+  const cliffUpdraftGroup = new THREE.Group();
+  const cliffTorusGeo = new THREE.TorusGeometry(6.0, 0.15, 3, 8);
+  cliffTorusGeo.rotateX(Math.PI / 2);
+  const cliffRingMesh = new THREE.Mesh(cliffTorusGeo, thermalRingMat);
+  cliffUpdraftGroup.add(cliffRingMesh);
+  cliffUpdraftGroup.position.set(0, 28.0, -15.0);
+  trackGroup.add(cliffUpdraftGroup);
+
+  obstacles.push({
+    id: 'cliff-thermal-buffer',
+    type: 'thermal',
+    center: cliffUpdraftGroup.position.clone(),
+    radius: 8.0,
+    height: 20.0,
+    meshGroup: cliffUpdraftGroup
+  });
 
   for (let i = 0; i < numSegments; i++) {
     const zStart = -i * segmentLength;
@@ -291,7 +336,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     const segmentGroup = new THREE.Group();
 
     // 2.1 Faceted Valley Floor
-    const floorGeo = new THREE.PlaneGeometry(halfValleyWidth * 2 + 8, segmentLength, 6, 8);
+    const floorGeo = new THREE.PlaneGeometry(halfValleyWidth * 2 + 8, segmentLength, 2, 2);
     floorGeo.rotateX(-Math.PI / 2);
     const floorMesh = new THREE.Mesh(floorGeo, groundMat);
     floorMesh.position.set(centerX, 0, zMid);
@@ -299,7 +344,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     segmentGroup.add(floorMesh);
 
     // 2.2 Sinuous Paper River Ribbon winding down the center
-    const riverGeo = new THREE.PlaneGeometry(5.5, segmentLength, 2, 8);
+    const riverGeo = new THREE.PlaneGeometry(5.5, segmentLength, 1, 2);
     riverGeo.rotateX(-Math.PI / 2);
     const riverMesh = new THREE.Mesh(riverGeo, riverMat);
     riverMesh.position.set(centerX + Math.sin(zMid * 0.03) * 2.0, 0.03, zMid);
@@ -354,23 +399,21 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     segmentGroup.add(rightMtn);
 
     // 2.5 Origami Conifer / Cherry Blossom Trees clustered on shelves
-    const treeCount = 4;
+    const treeCount = 2;
     for (let t = 0; t < treeCount; t++) {
       const isLeft = t % 2 === 0;
       const treeGroup = new THREE.Group();
-      const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, 1.4, 5);
+      const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, 1.4, 4);
       const trunk = new THREE.Mesh(trunkGeo, treeTrunkMat);
       trunk.position.set(0, 0.7, 0);
       treeGroup.add(trunk);
 
-      // 3 Stacked Conical Folded Foliage Tiers
-      const tier1 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 1.8, 6), treeFoliageMat);
+      // 2 Stacked Conical Folded Foliage Tiers
+      const tier1 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 1.6, 4), treeFoliageMat);
       tier1.position.set(0, 1.8, 0);
-      const tier2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.5, 6), treeFoliageMat);
+      const tier2 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.3, 4), treeFoliageMat);
       tier2.position.set(0, 2.7, 0);
-      const tier3 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.2, 6), treeFoliageMat);
-      tier3.position.set(0, 3.5, 0);
-      treeGroup.add(tier1, tier2, tier3);
+      treeGroup.add(tier1, tier2);
 
       const treeX = centerX + (isLeft ? -halfValleyWidth - 1.5 : halfValleyWidth + 1.5);
       const treeZ = zStart - (t + 1) * (segmentLength / (treeCount + 1));
@@ -395,9 +438,9 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     // 3.1 Spiraling Golden Paper Thermal Vortex
     if (level.allowedObstacles.includes('thermal') && i % 2 === 1) {
       const thermalGroup = new THREE.Group();
-      const ringCount = 3;
+      const ringCount = 2;
       for (let r = 0; r < ringCount; r++) {
-        const torusGeo = new THREE.TorusGeometry(3.6 - r * 0.4, 0.14, 6, 24);
+        const torusGeo = new THREE.TorusGeometry(3.6 - r * 0.5, 0.12, 3, 8);
         torusGeo.rotateX(Math.PI / 2);
         const ringMesh = new THREE.Mesh(torusGeo, thermalRingMat);
         ringMesh.position.set(0, 5 + r * 7.0, 0);
@@ -417,7 +460,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     }
 
     // 3.2 Sparkling Golden Lucky Stars
-    const starCount = 3;
+    const starCount = 2;
     for (let s = 0; s < starCount; s++) {
       const starGroup = new THREE.Group();
       const starGeo = new THREE.OctahedronGeometry(0.85, 0);
@@ -425,8 +468,8 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       starGroup.add(starMesh);
 
       // Star core glow ring
-      const haloGeo = new THREE.TorusGeometry(1.05, 0.06, 6, 16);
-      const haloMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65 });
+      const haloGeo = new THREE.RingGeometry(0.85, 1.05, 4);
+      const haloMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
       const halo = new THREE.Mesh(haloGeo, haloMat);
       starGroup.add(halo);
 
@@ -644,20 +687,15 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     flatShading: true
   });
 
-  const cloudCount = 20;
+  const cloudCount = 6;
   for (let c = 0; c < cloudCount; c++) {
     const cloudCluster = new THREE.Group();
-    // 3-4 overlapping flattened dodecahedrons forming a puffy paper cloud
-    const p1 = new THREE.Mesh(new THREE.DodecahedronGeometry(3.5, 0), cloudMat);
-    p1.scale.set(1.5, 0.5, 1.0);
-    const p2 = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8, 0), cloudMat);
-    p2.position.set(2.4, 0.3, 0);
-    p2.scale.set(1.2, 0.6, 0.9);
-    const p3 = new THREE.Mesh(new THREE.DodecahedronGeometry(2.6, 0), cloudMat);
-    p3.position.set(-2.2, 0.2, 0);
-    p3.scale.set(1.1, 0.5, 0.9);
+    // Low-poly folded origami paper cloud puffs
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.2, 2.5), cloudMat);
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.9, 2.0), cloudMat);
+    p2.position.set(2.2, 0.3, 0);
 
-    cloudCluster.add(p1, p2, p3);
+    cloudCluster.add(p1, p2);
     const zCloud = -c * (Math.min(level.goalDistance, 1800) / cloudCount) - 30;
     cloudCluster.position.set(
       getCanyonCenter(zCloud) + (Math.random() - 0.5) * 45,
@@ -673,7 +711,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   // ---------------------------------------------------------------------------
   let ambientParticles: THREE.Group | undefined;
   ambientParticles = new THREE.Group();
-  const particleCount = 55;
+  const particleCount = 20;
   let particleColor = 0xf472b6;
   if (biome === 'alpine_glacier') particleColor = 0xe0f2fe;
   else if (biome === 'bamboo_forest') particleColor = 0xa7f3d0;
@@ -705,7 +743,9 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     obstacles,
     level,
     ambientParticles,
-    cloudsGroup
+    cloudsGroup,
+    cliffElevation,
+    launchpadMesh
   };
 }
 

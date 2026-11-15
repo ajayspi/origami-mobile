@@ -57,3 +57,30 @@ describe('canyonWorld', () => {
     expect(() => updateDynamicObstacles(track, 1.5)).not.toThrow();
   });
 });
+
+describe('30-Meter Cliff Precipice Generator', () => {
+  it('generates cliff launchpad anchored at elevation y = 30m', () => {
+    const track = generateCanyonTrack(GAME_LEVELS[0]);
+    expect(track.cliffElevation).toBe(30.0);
+    // Launchpad mesh must be positioned at y=30
+    expect(track.launchpadMesh.position.y).toBeCloseTo(30.0, 1);
+  });
+
+  it('places a thermal updraft buffer directly in front of the cliff ledge', () => {
+    const track = generateCanyonTrack(GAME_LEVELS[0]);
+    const cliffUpdraft = track.obstacles.find(o => o.type === 'thermal' && o.center.z > -25 && o.center.z < -10);
+    expect(cliffUpdraft).toBeDefined();
+    expect(cliffUpdraft?.center.y).toBeGreaterThanOrEqual(25.0);
+  });
+
+  it('keeps total canyon vertex count under 4,500 vertices', () => {
+    const track = generateCanyonTrack(GAME_LEVELS[0]);
+    let totalVerts = 0;
+    track.trackGroup.traverse(child => {
+      if ((child as any).isMesh && (child as any).geometry) {
+        totalVerts += (child as any).geometry.getAttribute('position').count;
+      }
+    });
+    expect(totalVerts).toBeLessThan(4500);
+  });
+});
