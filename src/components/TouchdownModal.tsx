@@ -19,6 +19,8 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
   const distance = useGameStore(s => s.distance);
   const thermalsCaught = useGameStore(s => s.thermalsCaught);
   const starsCollected = useGameStore(s => s.starsCollected);
+  const landingMedal = useGameStore(s => s.landingMedal);
+  const landingBonusStars = useGameStore(s => s.landingBonusStars);
 
   if (flightState !== 'landed') return null;
 
@@ -105,6 +107,35 @@ export const TouchdownModal: React.FC<TouchdownModalProps> = ({
         >
           {goalMet ? 'Mission Accomplished!' : 'Graceful Touchdown!'}
         </h2>
+
+        {landingMedal && (
+          <div
+            style={{
+              background: landingMedal === 'bullseye'
+                ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                : landingMedal === 'gold'
+                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                : landingMedal === 'silver'
+                ? 'linear-gradient(135deg, #94a3b8, #64748b)'
+                : 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#ffffff',
+              padding: '6px 14px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 900,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              margin: '4px auto 10px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}
+          >
+            {landingMedal === 'bullseye' ? '🎯 DIRECT BULLSEYE' : landingMedal === 'gold' ? '🥇 GOLD TARGET' : landingMedal === 'silver' ? '🥈 SILVER TARGET' : '🥉 BRONZE TARGET'}
+            {landingBonusStars > 0 && <span style={{ color: '#fef08a' }}>+{landingBonusStars} ⭐</span>}
+          </div>
+        )}
 
         <p style={{ fontSize: 13, color: '#78716c', margin: '0 0 20px', fontWeight: 600 }}>
           {goalMet

@@ -103,6 +103,12 @@ export function computeAerodynamicStep(
     let inducedDrag = (cL * cL) / (Math.PI * ASPECT_RATIO * OSWALD_EFFICIENCY);
     let cD = (BASE_CD0 + inducedDrag) * dragUpgradeMultiplier;
 
+    // Natural aerodynamic pitch trimming (weather-vanes gently toward glide slope gamma)
+    if (controls.pitchInput === 0 && !isStalled) {
+      const targetTrimPitch = gamma + 0.04;
+      pitch += (targetTrimPitch - pitch) * 1.2 * subDt;
+    }
+
     // Ground effect cushion when altitude < 0.5m
     const altitude = Math.max(0, nextPos.y);
     if (altitude < 0.5) {
@@ -156,8 +162,15 @@ export function checkGlancingDeflection(
 ): DeflectionResult {
   for (const obs of obstacles) {
     if (obs.collected) continue;
-    const dist = position.distanceTo(obs.center);
-    if (dist <= obs.radius) {
+    const dx = position.x - obs.center.x;
+    const dz = position.z - obs.center.z;
+    const horizDist = Math.sqrt(dx * dx + dz * dz);
+    const dy = Math.abs(position.y - obs.center.y);
+    const isInBounds = obs.height !== undefined
+      ? (horizDist <= obs.radius && dy <= obs.height / 2)
+      : (position.distanceTo(obs.center) <= obs.radius);
+
+    if (isInBounds) {
       if (obs.type === 'solid') {
         const normal = obs.normal
           ? obs.normal.clone().normalize()

@@ -579,6 +579,15 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
           physicsState.roll *= Math.pow(0.85, dt * 60);
         }
 
+        // Active Pitch Up/Down Response from HUD or Gestures
+        const storePitch = useGameStore.getState().pitchInput;
+        if (storePitch !== 0) {
+          controls.pitchInput = storePitch;
+          physicsState.pitch += storePitch * 1.5 * dt;
+        } else if (!touchStart.active) {
+          controls.pitchInput = 0;
+        }
+
         // Active Gyroscope Tilt Steering (Roll & Pitch)
         const isGyroActive = useGameStore.getState().gyroEnabled;
         if (isGyroActive && gyroOrientation.active) {
@@ -688,9 +697,23 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // -------------------------------------------------------------
         for (const obs of trackData.obstacles) {
           if (obs.collected) continue;
-          const dist = physicsState.position.distanceTo(obs.center);
+          const dx = physicsState.position.x - obs.center.x;
+          const dz = physicsState.position.z - obs.center.z;
+          const horizDist = Math.sqrt(dx * dx + dz * dz);
+          const dy = Math.abs(physicsState.position.y - obs.center.y);
+          const dist3D = physicsState.position.distanceTo(obs.center);
 
-          if (dist <= obs.radius) {
+          // Magnetic attraction: pull floating stars & gift boxes toward plane when within 6.5m
+          if ((obs.type === 'star' || obs.type === 'surprise_orb') && dist3D < 6.5) {
+            obs.meshGroup.position.lerp(physicsState.position, 0.16);
+            obs.center.copy(obs.meshGroup.position);
+          }
+
+          const isInBounds = obs.height !== undefined
+            ? (horizDist <= obs.radius && dy <= obs.height / 2)
+            : (dist3D <= obs.radius);
+
+          if (isInBounds) {
             if (obs.type === 'whirlpool') {
               if (activeThermalId !== obs.id) {
                 activeThermalId = obs.id;
@@ -708,7 +731,7 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
               obs.meshGroup.visible = false;
               const fwd = physicsState.velocity.clone().normalize();
               if (fwd.lengthSq() < 0.1) fwd.set(0, 0, -1);
-              physicsState.velocity.addScaledVector(fwd, 10.0);
+              physicsState.velocity.addScaledVector(fwd, 12.0);
               useGameStore.getState().addBoostCharges(1);
               gameAudio.playRocketThruster();
               useGameStore.getState().triggerPowerNotification('Accelerator Gate', '⚡', '+1 ROCKET CHARGE');
@@ -800,19 +823,29 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         const currentSpeed = physicsState.velocity.length();
         const currentAlt = physicsState.altitude;
 
-        // Archetype Kinematic Flight Animations
+        // Archetype Kinematic Flight Animations & Dynamic Aerodynamic Action
         if (selectedKitId === 'japanese-01') {
-          // Sacred Peace Crane: Natural wing-flapping oscillation
-          const flap = Math.sin(currentTime * 0.008) * 0.12;
+          // Sacred Peace Crane: Natural wing-flapping oscillation (accelerates when boosting or thermal soaring)
+          const flapSpeed = (currentSpeed > 18 || isBoosting) ? 0.016 : 0.009;
+          const flapAmp = isBoosting ? 0.24 : 0.16;
+          const flap = Math.sin(currentTime * flapSpeed) * flapAmp;
           planeMesh.rotation.z = flap;
-          planeMesh.position.y = Math.sin(currentTime * 0.008) * 0.04;
+          planeMesh.position.y = Math.sin(currentTime * flapSpeed) * 0.08;
         } else if (selectedKitId === 'chinese-03') {
-          // Celestial Dragon: Serpentine undulation and tail sway
-          const sway = Math.sin(currentTime * 0.006) * 0.12;
+          // Celestial Dragon: Sinuous serpentine body undulation and traveling wave
+          const waveSpeed = 0.008;
+          const sway = Math.sin(currentTime * waveSpeed) * 0.18;
           planeMesh.rotation.y = Math.PI + sway;
-          planeMesh.rotation.z = Math.cos(currentTime * 0.006) * 0.06;
+          planeMesh.rotation.z = Math.cos(currentTime * waveSpeed) * 0.09;
+          planeMesh.position.x = Math.sin(currentTime * waveSpeed - 1.2) * 0.08;
         } else {
-          // Falcon Dart: High-Speed Dive Paper Wing Flutter Oscillation
+          // Peregrine Falcon: High-Speed Dive Delta-Wing Tuck & Banking Agility
+          if (physicsState.pitch < -0.15) {
+            // Tucked delta dive posture
+            planeMesh.scale.set(1.15, 1.15, 1.55);
+          } else {
+            planeMesh.scale.set(1.35, 1.35, 1.35);
+          }
           if (physicsState.pitch < -0.22 && currentSpeed > 14) {
             planeGroup.rotation.z += Math.sin(currentTime * 0.05) * 0.035;
             if (Math.random() < 0.15) {
@@ -894,10 +927,49 @@ export const FlightStage: React.FC<FlightStageProps> = ({ onTelemetryUpdate }) =
         // Visceral Banking Roll Follow
         camera.rotation.z += physicsState.roll * 0.22;
 
-        // Check Touchdown / Ground Landing
-        if (physicsState.altitude <= 0.02 && (currentSpeed < 2.5 || physicsState.position.y <= 0)) {
+        // Check Touchdown / Ground Landing or Landing Target Platform
+        const targetZ = -activeLevel.goalDistance;
+        const reachedTargetZone = physicsState.position.z <= (targetZ + 8.0);
+        const hitGroundOrTarget = (physicsState.altitude <= 0.25 && (currentSpeed < 3.5 || physicsState.position.y <= 0.1));
+
+        if (hitGroundOrTarget || (reachedTargetZone && physicsState.altitude <= 2.5 && currentSpeed < 8.0)) {
           gameAudio.stopFlightAudio();
-          useGameStore.getState().touchdown();
+
+          let landingBonus = 0;
+          let medal: 'bullseye' | 'gold' | 'silver' | 'bronze' | null = null;
+
+          if (trackData.landingTarget) {
+            const tCenter = trackData.landingTarget.center;
+            const targetOffset = Math.sqrt(
+              Math.pow(physicsState.position.x - tCenter.x, 2) +
+              Math.pow(physicsState.position.z - tCenter.z, 2)
+            );
+
+            if (targetOffset <= 2.8) {
+              medal = 'bullseye';
+              landingBonus = 100;
+              gameAudio.playVictoryFanfare();
+              useGameStore.getState().triggerPowerNotification('Bullseye Touchdown!', '🎯', '+100 STARS (PERFECT TARGET)');
+              confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 } });
+            } else if (targetOffset <= 6.5) {
+              medal = 'gold';
+              landingBonus = 50;
+              gameAudio.playVictoryFanfare();
+              useGameStore.getState().triggerPowerNotification('Gold Landing!', '🥇', '+50 STARS (INNER RING)');
+              confetti({ particleCount: 90, spread: 85, origin: { y: 0.55 } });
+            } else if (targetOffset <= 11.0) {
+              medal = 'silver';
+              landingBonus = 25;
+              useGameStore.getState().triggerPowerNotification('Silver Landing!', '🥈', '+25 STARS');
+              confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+            } else if (targetOffset <= 16.0) {
+              medal = 'bronze';
+              landingBonus = 10;
+              useGameStore.getState().triggerPowerNotification('Bronze Landing!', '🥉', '+10 STARS');
+            }
+          }
+
+          useGameStore.getState().touchdown(landingBonus, medal);
           confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
         }
       } else if (currentFlightState === 'cliff-aim' || currentFlightState === 'idle') {

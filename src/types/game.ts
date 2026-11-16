@@ -96,10 +96,13 @@ export interface GameState {
   activePaperStock: PaperStock;
   activeStunt: StuntType;
   steerInput: number;
+  pitchInput: number;
   boostCharges: number;
   isBoosting: boolean;
   gyroEnabled: boolean;
   activePowerNotification: ActivePowerNotification | null;
+  landingMedal: 'bullseye' | 'gold' | 'silver' | 'bronze' | null;
+  landingBonusStars: number;
 
   // Actions
   setFlightState: (state: FlightState) => void;
@@ -109,6 +112,7 @@ export interface GameState {
   selectKit: (kitId: string) => void;
   selectLevel: (levelId: string) => void;
   setSteerInput: (val: number) => void;
+  setPitchInput: (val: number) => void;
   activateBoost: () => boolean;
   addBoostCharges: (count: number) => void;
   collectStars: (count: number) => void;
@@ -119,7 +123,7 @@ export interface GameState {
   collectStar: () => void;
   triggerThermal: () => void;
   triggerStunt: (type: 'roll' | 'loop') => void;
-  touchdown: () => void;
+  touchdown: (bonusStars?: number, medal?: 'bullseye' | 'gold' | 'silver' | 'bronze' | null) => void;
   spendStarsOnUpgrade: (upgradeKey: keyof AircraftUpgrades, cost: number) => boolean;
   setPaperStock: (stock: PaperStock) => void;
   resetRun: () => void;

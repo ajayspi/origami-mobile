@@ -49,4 +49,19 @@ describe('flightPhysics', () => {
     expect(result.deflectedVelocity.x).toBeLessThan(0); // Bounced away from wall
     expect(result.deflectedVelocity.z).toBeCloseTo(-10.56, 0.5); // Preserved forward speed
   });
+
+  it('naturally trims pitch toward flight path angle for stable glide descent', () => {
+    const descendingState: FlightPhysicsState = {
+      position: new THREE.Vector3(0, 35, -50),
+      velocity: new THREE.Vector3(0, -2.5, -15), // Descending forward trajectory
+      rotation: new THREE.Euler(0.2, 0, 0),
+      pitch: 0.2,
+      roll: 0,
+      yaw: 0,
+      isStalled: false,
+      altitude: 35
+    };
+    const next = computeAerodynamicStep(descendingState, { pitchInput: 0, rollInput: 0 }, 0.05, 1.0, 1.0);
+    expect(next.pitch).toBeLessThan(descendingState.pitch); // Trims nose downward to track glide slope
+  });
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { GAME_LEVELS } from '../data/gameLevels';
 import { TRINITY_KITS } from '../types/game';
-import { Wrench, MapPin, Sparkles, Wind, Flame, ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
+import { Wrench, MapPin, Sparkles, Wind, Flame, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Target, Smartphone } from 'lucide-react';
 
 interface FlightHUDProps {
   onOpenKitSelector: () => void;
@@ -100,7 +100,7 @@ const FlightTelemetry: React.FC<{ goalDistance: number }> = React.memo(({ goalDi
           {distance}m
         </div>
         <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', opacity: 0.9 }}>
-          TARGET: {goalDistance}m
+          {distance >= goalDistance ? '🎯 LANDING TARGET REACHED!' : `TARGET: ${goalDistance}m`}
         </div>
       </div>
     </>
@@ -124,6 +124,8 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
   const activePowerNotification = useGameStore(s => s.activePowerNotification);
   const steerInput = useGameStore(s => s.steerInput);
   const setSteerInput = useGameStore(s => s.setSteerInput);
+  const pitchInput = useGameStore(s => s.pitchInput);
+  const setPitchInput = useGameStore(s => s.setPitchInput);
   const activateBoost = useGameStore(s => s.activateBoost);
   const gyroEnabled = useGameStore(s => s.gyroEnabled);
   const setGyroEnabled = useGameStore(s => s.setGyroEnabled);
@@ -383,78 +385,143 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
       {/* IN-FLIGHT TACTILE CONTROLS (STEER LEFT / RIGHT & THRUSTER BOOSTERS) */}
       {flightState === 'flying' && (
         <>
-          {/* Left/Right Steering Buttons (Bottom Left) */}
+          {/* Directional Flight Steering & Pitch Altitude Controls (Bottom Left) */}
           <div
             style={{
               position: 'absolute',
-              bottom: 'calc(env(safe-area-inset-bottom) + 20px)',
-              left: 14,
+              bottom: 'calc(env(safe-area-inset-bottom) + 16px)',
+              left: 12,
               display: 'flex',
+              alignItems: 'flex-end',
               gap: 8,
               pointerEvents: 'auto'
             }}
           >
-            <button
-              onPointerDown={() => setSteerInput(-1)}
-              onPointerUp={() => setSteerInput(0)}
-              onPointerLeave={() => setSteerInput(0)}
-              style={{
-                width: 58,
-                height: 58,
-                borderRadius: 20,
-                border: steerInput < 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
-                background: steerInput < 0
-                  ? 'linear-gradient(135deg, #0284c7, #075985)'
-                  : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                color: '#ffffff',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: steerInput < 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 16px rgba(14,165,233,0.4)',
-                transform: steerInput < 0 ? 'translateY(3px)' : 'none',
-                userSelect: 'none'
-              }}
-            >
-              <ChevronLeft size={26} />
-              <span style={{ fontSize: 9, fontWeight: 900 }}>LEFT</span>
-            </button>
+            {/* Steering (Roll) Left & Right */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onPointerDown={() => setSteerInput(-1)}
+                onPointerUp={() => setSteerInput(0)}
+                onPointerLeave={() => setSteerInput(0)}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 18,
+                  border: steerInput < 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
+                  background: steerInput < 0
+                    ? 'linear-gradient(135deg, #0284c7, #075985)'
+                    : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: steerInput < 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 14px rgba(14,165,233,0.4)',
+                  transform: steerInput < 0 ? 'translateY(3px)' : 'none',
+                  userSelect: 'none'
+                }}
+                title="Bank Left"
+              >
+                <ChevronLeft size={24} />
+                <span style={{ fontSize: 8, fontWeight: 900 }}>LEFT</span>
+              </button>
 
-            <button
-              onPointerDown={() => setSteerInput(1)}
-              onPointerUp={() => setSteerInput(0)}
-              onPointerLeave={() => setSteerInput(0)}
-              style={{
-                width: 58,
-                height: 58,
-                borderRadius: 20,
-                border: steerInput > 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
-                background: steerInput > 0
-                  ? 'linear-gradient(135deg, #0284c7, #075985)'
-                  : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                color: '#ffffff',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: steerInput > 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 16px rgba(14,165,233,0.4)',
-                transform: steerInput > 0 ? 'translateY(3px)' : 'none',
-                userSelect: 'none'
-              }}
-            >
-              <ChevronRight size={26} />
-              <span style={{ fontSize: 9, fontWeight: 900 }}>RIGHT</span>
-            </button>
+              <button
+                onPointerDown={() => setSteerInput(1)}
+                onPointerUp={() => setSteerInput(0)}
+                onPointerLeave={() => setSteerInput(0)}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 18,
+                  border: steerInput > 0 ? '3px solid #fef08a' : '3px solid #38bdf8',
+                  background: steerInput > 0
+                    ? 'linear-gradient(135deg, #0284c7, #075985)'
+                    : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: steerInput > 0 ? '0 1px 0 #075985' : '0 4px 0 #075985, 0 6px 14px rgba(14,165,233,0.4)',
+                  transform: steerInput > 0 ? 'translateY(3px)' : 'none',
+                  userSelect: 'none'
+                }}
+                title="Bank Right"
+              >
+                <ChevronRight size={24} />
+                <span style={{ fontSize: 8, fontWeight: 900 }}>RIGHT</span>
+              </button>
+            </div>
+
+            {/* Pitch (Altitude) Up & Down */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button
+                onPointerDown={() => setPitchInput(0.85)}
+                onPointerUp={() => setPitchInput(0)}
+                onPointerLeave={() => setPitchInput(0)}
+                style={{
+                  width: 52,
+                  height: 44,
+                  borderRadius: 16,
+                  border: pitchInput > 0 ? '3px solid #fef08a' : '3px solid #10b981',
+                  background: pitchInput > 0
+                    ? 'linear-gradient(135deg, #059669, #047857)'
+                    : 'linear-gradient(135deg, #10b981, #059669)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: pitchInput > 0 ? '0 1px 0 #047857' : '0 3px 0 #047857, 0 4px 10px rgba(16,185,129,0.3)',
+                  transform: pitchInput > 0 ? 'translateY(2px)' : 'none',
+                  userSelect: 'none'
+                }}
+                title="Pitch up to float and extend glide"
+              >
+                <ChevronUp size={20} />
+                <span style={{ fontSize: 8, fontWeight: 900 }}>SOAR</span>
+              </button>
+
+              <button
+                onPointerDown={() => setPitchInput(-0.85)}
+                onPointerUp={() => setPitchInput(0)}
+                onPointerLeave={() => setPitchInput(0)}
+                style={{
+                  width: 52,
+                  height: 44,
+                  borderRadius: 16,
+                  border: pitchInput < 0 ? '3px solid #fef08a' : '3px solid #6366f1',
+                  background: pitchInput < 0
+                    ? 'linear-gradient(135deg, #4f46e5, #4338ca)'
+                    : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: pitchInput < 0 ? '0 1px 0 #4338ca' : '0 3px 0 #4338ca, 0 4px 10px rgba(99,102,241,0.3)',
+                  transform: pitchInput < 0 ? 'translateY(2px)' : 'none',
+                  userSelect: 'none'
+                }}
+                title="Pitch down to dive and gain speed"
+              >
+                <ChevronDown size={20} />
+                <span style={{ fontSize: 8, fontWeight: 900 }}>DIVE</span>
+              </button>
+            </div>
 
             {/* Mobile Gyroscope Tilt Toggle Button */}
             <button
               onClick={handleToggleGyro}
               style={{
-                width: 58,
-                height: 58,
-                borderRadius: 20,
+                width: 48,
+                height: 48,
+                borderRadius: 18,
                 border: gyroEnabled ? '3px solid #4ade80' : '3px solid #64748b',
                 background: gyroEnabled
                   ? 'linear-gradient(135deg, #15803d, #166534)'
@@ -466,16 +533,16 @@ export const FlightHUD: React.FC<FlightHUDProps> = ({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 boxShadow: gyroEnabled
-                  ? '0 4px 0 #14532d, 0 6px 16px rgba(74,222,128,0.4)'
-                  : '0 4px 0 #0f172a, 0 4px 10px rgba(0,0,0,0.3)',
+                  ? '0 3px 0 #14532d, 0 4px 12px rgba(74,222,128,0.4)'
+                  : '0 3px 0 #0f172a, 0 4px 8px rgba(0,0,0,0.3)',
                 transform: gyroEnabled ? 'translateY(1px)' : 'none',
                 userSelect: 'none'
               }}
               title="Toggle mobile device tilt steering"
             >
-              <Smartphone size={22} color={gyroEnabled ? '#4ade80' : '#94a3b8'} />
-              <span style={{ fontSize: 9, fontWeight: 900, color: gyroEnabled ? '#4ade80' : '#94a3b8' }}>
-                {gyroEnabled ? 'TILT ON' : 'TILT'}
+              <Smartphone size={18} color={gyroEnabled ? '#4ade80' : '#94a3b8'} />
+              <span style={{ fontSize: 7, fontWeight: 900, color: gyroEnabled ? '#4ade80' : '#94a3b8' }}>
+                {gyroEnabled ? 'TILT' : 'TILT'}
               </span>
             </button>
           </div>

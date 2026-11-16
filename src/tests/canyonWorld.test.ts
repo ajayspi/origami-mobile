@@ -83,4 +83,19 @@ describe('30-Meter Cliff Precipice Generator', () => {
     });
     expect(totalVerts).toBeLessThan(4500);
   });
+
+  it('generates sky-altitude collectibles and landing bullseye target with beacon', () => {
+    const track = generateCanyonTrack(GAME_LEVELS[0]);
+    // Collectibles in the high sky (y >= 20m)
+    const skyStars = track.obstacles.filter(o => o.type === 'star' && o.center.y >= 20.0);
+    expect(skyStars.length).toBeGreaterThan(0);
+
+    const skyGates = track.obstacles.filter(o => o.type === 'speed_gate' && o.center.y >= 25.0);
+    expect(skyGates.length).toBeGreaterThan(0);
+
+    // Landing target bullseye platform and beacon
+    expect(track.landingTarget).toBeDefined();
+    expect(track.landingTarget.radius).toBe(16.0);
+    expect(track.landingTarget.center.z).toBe(-GAME_LEVELS[0].goalDistance);
+  });
 });

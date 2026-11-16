@@ -59,10 +59,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   activePaperStock: 'washi',
   activeStunt: null,
   steerInput: 0,
+  pitchInput: 0,
   boostCharges: 3,
   isBoosting: false,
   gyroEnabled: false,
   activePowerNotification: null,
+  landingMedal: null,
+  landingBonusStars: 0,
 
   setFlightState: (flightState: FlightState) => set({ flightState }),
 
@@ -76,7 +79,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     boostCharges: 3,
     isBoosting: false,
     steerInput: 0,
-    activePowerNotification: null
+    pitchInput: 0,
+    activePowerNotification: null,
+    landingMedal: null,
+    landingBonusStars: 0
   }),
 
   instantCliffRespawn: () => set({
@@ -87,12 +93,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     boostCharges: 3,
     isBoosting: false,
     steerInput: 0,
-    activePowerNotification: null
+    pitchInput: 0,
+    activePowerNotification: null,
+    landingMedal: null,
+    landingBonusStars: 0
   }),
 
   selectKit: (selectedKitId: string) => set({ selectedKitId }),
 
   setSteerInput: (steerInput: number) => set({ steerInput }),
+
+  setPitchInput: (pitchInput: number) => set({ pitchInput: Math.max(-1, Math.min(1, pitchInput)) }),
 
   setGyroEnabled: (gyroEnabled: boolean) => set({ gyroEnabled }),
 
@@ -177,13 +188,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     }, type === 'roll' ? 700 : 1100);
   },
 
-  touchdown: () => {
-    const { activeLevelId, distance, highScores, unlockedLevels } = get();
+  touchdown: (bonusStars = 0, medal: 'bullseye' | 'gold' | 'silver' | 'bronze' | null = null) => {
+    const { activeLevelId, distance, highScores, unlockedLevels, totalStars, starsCollected } = get();
     const currentBest = highScores[activeLevelId] || 0;
     const nextHighScores = {
       ...highScores,
       [activeLevelId]: Math.max(currentBest, distance)
     };
+
+    const nextTotalStars = totalStars + bonusStars;
 
     const currentLevel = GAME_LEVELS.find(l => l.id === activeLevelId);
     let nextUnlocked = [...unlockedLevels];
@@ -201,10 +214,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       localStorage.setItem(STORAGE_KEY_SCORES, JSON.stringify(nextHighScores));
       localStorage.setItem(STORAGE_KEY_UNLOCKED, JSON.stringify(nextUnlocked));
+      localStorage.setItem(STORAGE_KEY_STARS, String(nextTotalStars));
     } catch {}
 
     set({
       flightState: 'landed',
+      totalStars: nextTotalStars,
+      landingMedal: medal,
+      landingBonusStars: bonusStars,
       highScores: nextHighScores,
       unlockedLevels: nextUnlocked
     });
@@ -245,9 +262,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       thermalsCaught: 0,
       starsCollected: 0,
       steerInput: 0,
+      pitchInput: 0,
       boostCharges: 3,
       isBoosting: false,
-      activePowerNotification: null
+      activePowerNotification: null,
+      landingMedal: null,
+      landingBonusStars: 0
     });
   }
 }));

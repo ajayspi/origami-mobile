@@ -36,6 +36,11 @@ export interface CanyonTrackData {
   cloudsGroup?: THREE.Group;
   cliffElevation: number;
   launchpadMesh: THREE.Mesh;
+  landingTarget: {
+    center: THREE.Vector3;
+    radius: number;
+    meshGroup: THREE.Group;
+  };
 }
 
 export function getWeatherLighting(distance: number, biome?: BiomeType): WeatherLightingConfig {
@@ -336,16 +341,58 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   wpRing2.scale.set(0.68, 0.68, 0.68);
   wpRing2.position.set(0, 0, -0.6);
   cliffWhirlpoolGroup.add(wpRing1, wpRing2);
-  cliffWhirlpoolGroup.position.set(0, 24.0, -35.0);
+  cliffWhirlpoolGroup.position.set(0, 31.0, -35.0);
   trackGroup.add(cliffWhirlpoolGroup);
 
   obstacles.push({
     id: 'cliff-whirlpool-catapult',
     type: 'whirlpool',
     center: cliffWhirlpoolGroup.position.clone(),
-    radius: 5.5,
+    radius: 6.0,
     meshGroup: cliffWhirlpoolGroup
   });
+
+  // Launch Sky Highway Accelerator Gate (Right in front of cliff edge at cruising altitude)
+  const launchGateGroup = new THREE.Group();
+  const lGateGeo = new THREE.RingGeometry(3.6, 4.6, 6);
+  const lGateMesh = new THREE.Mesh(lGateGeo, new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xd97706,
+    roughness: 0.3,
+    side: THREE.DoubleSide,
+    flatShading: true
+  }));
+  launchGateGroup.add(lGateMesh);
+  launchGateGroup.position.set(0, 34.0, -55.0);
+  trackGroup.add(launchGateGroup);
+  obstacles.push({
+    id: 'cliff-launch-speedgate',
+    type: 'speed_gate',
+    center: launchGateGroup.position.clone(),
+    radius: 4.8,
+    meshGroup: launchGateGroup,
+    collected: false
+  });
+
+  // Launch Arc Golden Star Chain (3 Stars ascending across natural slingshot trajectory)
+  for (let s = 0; s < 3; s++) {
+    const starGroup = new THREE.Group();
+    const starMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), goldStarMat);
+    const starHalo = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 6), new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+    starGroup.add(starMesh, starHalo);
+    const archY = 32.0 + Math.sin((s / 2) * Math.PI) * 7.0; // Arcs from y=32.0 up to y=39.0
+    const archZ = -25 - s * 20;
+    starGroup.position.set(Math.sin(s * 1.2) * 2.5, archY, archZ);
+    trackGroup.add(starGroup);
+    obstacles.push({
+      id: `launch-star-${s}`,
+      type: 'star',
+      center: starGroup.position.clone(),
+      radius: 2.2,
+      meshGroup: starGroup,
+      collected: false
+    });
+  }
 
   for (let i = 0; i < numSegments; i++) {
     const zStart = -i * segmentLength;
@@ -455,15 +502,15 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     // -------------------------------------------------------------------------
     const zDist = Math.abs(zMid);
 
-    // 3.1 Spiraling Golden Paper Thermal Vortex
+    // 3.1 Spiraling Golden Paper Thermal Vortex (Spanning Full Vertical Corridor)
     if (level.allowedObstacles.includes('thermal') && i % 2 === 1) {
       const thermalGroup = new THREE.Group();
-      const ringCount = 2;
+      const ringCount = 3;
       for (let r = 0; r < ringCount; r++) {
-        const torusGeo = new THREE.RingGeometry(2.8 - r * 0.5, 3.6 - r * 0.5, 6);
+        const torusGeo = new THREE.RingGeometry(3.2 - r * 0.4, 4.2 - r * 0.4, 6);
         torusGeo.rotateX(Math.PI / 2);
         const ringMesh = new THREE.Mesh(torusGeo, thermalRingMat);
-        ringMesh.position.set(0, 5 + r * 7.0, 0);
+        ringMesh.position.set(0, 8 + r * 11.0, 0); // Spanning y=8, 19, 30
         thermalGroup.add(ringMesh);
       }
       thermalGroup.position.set(centerX + Math.sin(i) * 5, 0, zMid);
@@ -472,29 +519,33 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
       obstacles.push({
         id: `thermal-${i}`,
         type: 'thermal',
-        center: thermalGroup.position.clone(),
-        radius: 4.5,
-        height: 25,
+        center: new THREE.Vector3(centerX + Math.sin(i) * 5, 20.0, zMid),
+        radius: 6.0,
+        height: 38,
         meshGroup: thermalGroup
       });
     }
 
-    // 3.2 Sparkling Golden Lucky Stars
+    // 3.2 Sparkling Golden Lucky Stars (Stratified Across Sky Altitudes)
     const starCount = 2;
     for (let s = 0; s < starCount; s++) {
       const starGroup = new THREE.Group();
-      const starGeo = new THREE.OctahedronGeometry(0.85, 0);
+      const starGeo = new THREE.OctahedronGeometry(0.9, 0);
       const starMesh = new THREE.Mesh(starGeo, goldStarMat);
       starGroup.add(starMesh);
 
       // Star core glow ring
-      const haloGeo = new THREE.RingGeometry(0.85, 1.05, 4);
-      const haloMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
+      const haloGeo = new THREE.RingGeometry(0.85, 1.15, 6);
+      const haloMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
       const halo = new THREE.Mesh(haloGeo, haloMat);
       starGroup.add(halo);
 
       const starX = centerX + Math.sin(i * 3 + s) * 7.5;
-      const starY = 4.2 + Math.cos(i + s) * 2.8;
+      // Sky altitude strata: s=0 in High Sky (25-39m), s=1 in Mid Glide (14-26m)
+      const starY = s === 0
+        ? (32.0 + Math.sin(i * 1.7) * 7.0)
+        : (20.0 + Math.cos(i * 1.5) * 6.0);
+
       const starZ = zStart - (s + 1) * (segmentLength / (starCount + 1));
       starGroup.position.set(starX, starY, starZ);
 
@@ -503,7 +554,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
         id: `star-${i}-${s}`,
         type: 'star',
         center: starGroup.position.clone(),
-        radius: 1.3,
+        radius: 2.2,
         meshGroup: starGroup,
         collected: false
       });
@@ -695,10 +746,10 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
 
     // 3.9 In-Air Powers, Whirlpools, Speed Loops & Surprises
     if (i > 0) {
-      // (a) Supersonic Torii Accelerator Speed Gate (Every even segment)
+      // (a) Supersonic Torii Accelerator Speed Gate (Elevated at Soaring Cruise Altitudes)
       if (i % 2 === 0) {
         const gateGroup = new THREE.Group();
-        const archGeo = new THREE.RingGeometry(3.2, 4.0, 6);
+        const archGeo = new THREE.RingGeometry(3.6, 4.6, 6);
         const gateMesh = new THREE.Mesh(archGeo, new THREE.MeshStandardMaterial({
           color: 0xf59e0b,
           emissive: 0xd97706,
@@ -709,14 +760,15 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
         gateGroup.add(gateMesh);
 
         // Chevron arrow inside gate
-        const arrowGeo = new THREE.ConeGeometry(0.7, 1.6, 4);
+        const arrowGeo = new THREE.ConeGeometry(0.75, 1.8, 4);
         arrowGeo.rotateX(-Math.PI / 2);
         const arrowMesh = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.9 }));
         arrowMesh.position.set(0, 0, 0);
         gateGroup.add(arrowMesh);
 
         const gateZ = zStart - 30;
-        const gateCenter = new THREE.Vector3(centerX, 18.0, gateZ);
+        const gateY = 29.0 + Math.sin(i * 1.3) * 6.0; // Cruise altitude 23m-35m
+        const gateCenter = new THREE.Vector3(centerX, gateY, gateZ);
         gateGroup.position.copy(gateCenter);
         trackGroup.add(gateGroup);
 
@@ -724,25 +776,26 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
           id: `speedgate-${i}`,
           type: 'speed_gate',
           center: gateCenter,
-          radius: 3.8,
+          radius: 4.8,
           meshGroup: gateGroup,
           collected: false
         });
       }
 
-      // (b) Golden Air Whirlpool Catapult (Every 3rd segment)
+      // (b) Golden Air Whirlpool Catapult (Elevated at Sky Altitudes)
       if (i % 3 === 2) {
         const wpGroup = new THREE.Group();
-        const wpGeo = new THREE.RingGeometry(2.6, 4.2, 6);
+        const wpGeo = new THREE.RingGeometry(3.0, 4.8, 6);
         wpGeo.rotateX(Math.PI / 3);
         const wp1 = new THREE.Mesh(wpGeo, new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
         const wp2 = new THREE.Mesh(wpGeo, new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.75, side: THREE.DoubleSide }));
-        wp2.scale.set(0.65, 0.65, 0.65);
+        wp2.scale.set(0.68, 0.68, 0.68);
         wpGroup.add(wp1, wp2);
 
         const wpZ = zStart - 55;
         const wpX = centerX + (i % 2 === 0 ? 3.0 : -3.0);
-        const wpCenter = new THREE.Vector3(wpX, 16.0, wpZ);
+        const wpY = 27.0 + Math.cos(i * 1.5) * 6.0; // Sky altitude 21m-33m
+        const wpCenter = new THREE.Vector3(wpX, wpY, wpZ);
         wpGroup.position.copy(wpCenter);
         trackGroup.add(wpGroup);
 
@@ -750,15 +803,15 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
           id: `whirlpool-${i}`,
           type: 'whirlpool',
           center: wpCenter,
-          radius: 4.8,
+          radius: 5.5,
           meshGroup: wpGroup
         });
       }
 
-      // (c) Acrobatic Stunt Loop Ring (Every 3rd segment)
+      // (c) Acrobatic Stunt Loop Ring (Elevated in Sky Clouds)
       if (i % 3 === 1) {
         const loopGroup = new THREE.Group();
-        const hoopGeo = new THREE.RingGeometry(3.2, 4.2, 8);
+        const hoopGeo = new THREE.RingGeometry(3.6, 4.8, 8);
         const hoopMesh = new THREE.Mesh(hoopGeo, new THREE.MeshStandardMaterial({
           color: 0xec4899,
           emissive: 0xbe185d,
@@ -769,12 +822,13 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
         loopGroup.add(hoopMesh);
 
         // Crane emblem perched on top
-        const emblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.7, 0), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
-        emblem.position.set(0, 4.2, 0);
+        const emblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.85, 0), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+        emblem.position.set(0, 4.8, 0);
         loopGroup.add(emblem);
 
         const loopZ = zStart - 70;
-        const loopCenter = new THREE.Vector3(centerX, 20.0, loopZ);
+        const loopY = 30.0 + Math.sin(i * 1.7) * 5.5; // Sky altitude 24.5m-35.5m
+        const loopCenter = new THREE.Vector3(centerX, loopY, loopZ);
         loopGroup.position.copy(loopCenter);
         trackGroup.add(loopGroup);
 
@@ -782,30 +836,30 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
           id: `loopring-${i}`,
           type: 'loop_ring',
           center: loopCenter,
-          radius: 4.2,
+          radius: 4.8,
           meshGroup: loopGroup,
           collected: false
         });
       }
 
-      // (d) Mystery Surprise Origami Box (Alternating segments)
+      // (d) Mystery Surprise Origami Box (Elevated across Flight Path)
       if (i % 2 === 1) {
         const boxGroup = new THREE.Group();
-        const giftBoxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+        const giftBoxGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
         const giftBoxMat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.6, flatShading: true });
         const giftMesh = new THREE.Mesh(giftBoxGeo, giftBoxMat);
 
-        const ribGeo = new THREE.BoxGeometry(1.55, 0.28, 1.55);
+        const ribGeo = new THREE.BoxGeometry(1.65, 0.3, 1.65);
         const ribMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
         const ribMesh = new THREE.Mesh(ribGeo, ribMat);
 
-        const bowMesh = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.55, 5), ribMat);
-        bowMesh.position.set(0, 0.9, 0);
+        const bowMesh = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.6, 5), ribMat);
+        bowMesh.position.set(0, 0.95, 0);
         boxGroup.add(giftMesh, ribMesh, bowMesh);
 
         const boxZ = zStart - 85;
         const boxX = centerX + Math.sin(i * 2.2) * 4.0;
-        const boxY = 15.0 + Math.cos(i * 1.5) * 3.5;
+        const boxY = 28.0 + Math.cos(i * 1.5) * 6.5; // Cruise altitude 21.5m-34.5m
         const boxCenter = new THREE.Vector3(boxX, boxY, boxZ);
         boxGroup.position.copy(boxCenter);
         trackGroup.add(boxGroup);
@@ -814,7 +868,7 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
           id: `surprise-${i}`,
           type: 'surprise_orb',
           center: boxCenter,
-          radius: 2.2,
+          radius: 3.2,
           meshGroup: boxGroup,
           collected: false
         });
@@ -885,6 +939,67 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
   }
   trackGroup.add(ambientParticles);
 
+  // ---------------------------------------------------------------------------
+  // 6. LANDING TARGET BULLSEYE PLATFORM & HIGH SKY BEACON
+  // ---------------------------------------------------------------------------
+  const targetZ = -level.goalDistance;
+  const targetCenterX = getCanyonCenter(targetZ);
+  const targetCenter = new THREE.Vector3(targetCenterX, 0.4, targetZ);
+  const landingGroup = new THREE.Group();
+  landingGroup.position.copy(targetCenter);
+
+  // Concentric Circular Origami Rings
+  const ringMatWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, flatShading: true });
+  const ringMatGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.8, flatShading: true });
+  const ringMatGold = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.6, flatShading: true });
+  const ringMatRed = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5, flatShading: true });
+
+  // Outer Ring (r=16m) - White (Low-poly folded paper hexagon)
+  const r4 = new THREE.Mesh(new THREE.CylinderGeometry(16, 16.5, 0.4, 6), ringMatWhite);
+  r4.position.set(0, 0.2, 0);
+  r4.receiveShadow = true;
+
+  // Bronze Ring (r=11m) - Emerald Green
+  const r3 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 0.45, 6), ringMatGreen);
+  r3.position.set(0, 0.23, 0);
+
+  // Silver Ring (r=6.5m) - Golden Amber
+  const r2 = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 0.5, 6), ringMatGold);
+  r2.position.set(0, 0.26, 0);
+
+  // Bullseye Ruby Center (r=2.8m) - Crimson Red
+  const r1 = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.8, 0.55, 6), ringMatRed);
+  r1.position.set(0, 0.29, 0);
+
+  // Center Golden Origami Star
+  const starCenter = new THREE.Mesh(new THREE.OctahedronGeometry(1.2, 0), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+  starCenter.position.set(0, 0.9, 0);
+
+  // Towering Origami Beacon Beam of Light (Rising 90m into high sky)
+  const beaconGeo = new THREE.CylinderGeometry(0.8, 2.5, 90, 4);
+  const beaconMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.35,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
+  beaconMesh.position.set(0, 45, 0);
+
+  // Beacon Crown Golden Diamond
+  const crownStar = new THREE.Mesh(new THREE.OctahedronGeometry(2.5, 0), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+  crownStar.position.set(0, 90, 0);
+
+  landingGroup.add(r4, r3, r2, r1, starCenter, beaconMesh, crownStar);
+  trackGroup.add(landingGroup);
+
+  const landingTarget = {
+    center: targetCenter,
+    radius: 16.0,
+    meshGroup: landingGroup
+  };
+
   return {
     trackGroup,
     segments,
@@ -893,7 +1008,8 @@ export function generateCanyonTrack(level: GameLevel): CanyonTrackData {
     ambientParticles,
     cloudsGroup,
     cliffElevation,
-    launchpadMesh
+    launchpadMesh,
+    landingTarget
   };
 }
 
@@ -926,6 +1042,13 @@ export function updateDynamicObstacles(track: CanyonTrackData, time: number): vo
       obs.meshGroup.rotation.y = time * 2.2;
       obs.meshGroup.position.y = obs.center.y + Math.sin(time * 2.8) * 0.4;
     }
+  }
+
+  // Landing Target beacon crown rotation
+  if (track.landingTarget && track.landingTarget.meshGroup) {
+    const children = track.landingTarget.meshGroup.children;
+    if (children[6]) children[6].rotation.y = time * 1.5;
+    if (children[4]) children[4].rotation.y = time * 2.0;
   }
 
   // Drifting ambient petals & particles
